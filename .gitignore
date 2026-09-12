@@ -22,3 +22,4 @@ config/*.local.yml*
 *.pem
 *.key
 credentials*.json
+condaenv.*.requirements.txt

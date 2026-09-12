@@ -6,7 +6,28 @@
 
 ## 在另一台工作站开始
 
-在Linux或WSL终端执行；先安装[uv](https://docs.astral.sh/uv/getting-started/installation/)：
+在Linux或WSL终端执行。已有Conda时可直接使用：
+
+```bash
+git clone https://github.com/zhenzonglin/WMH.git
+cd WMH
+conda env create -f environment.yml
+conda activate wmh-hcy
+python -m pip check
+python -m pytest -q
+
+# 先检查SAS字段和患者数；此时不需要影像目录。
+wmh-hcy configure --sas-dir "/data/CNSRIII/SAS"
+wmh-hcy audit
+
+# 提供既有SuStaIn路径后，连接影像并准备队列。
+wmh-hcy configure --sustain-dir "/data/SuStaIn"
+wmh-hcy run --through prepare
+```
+
+Conda版不需要安装uv。`environment.yml`通过Conda安装Python和OpenMP运行库，再由环境内的pip安装`requirements-conda.txt`中的固定版本及本项目。审阅病例后，用`wmh-hcy run --through report`启动完整分析。**下文所有`uv run wmh-hcy ...`，在已激活的Conda环境中都可直接写成`wmh-hcy ...`。**
+
+也可以继续使用[uv](https://docs.astral.sh/uv/getting-started/installation/)：
 
 ```bash
 git clone https://github.com/zhenzonglin/WMH.git

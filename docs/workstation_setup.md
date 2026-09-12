@@ -1,8 +1,41 @@
 # 工作站接入：先核查SAS，再连接WMH，最后启动分析
 
-适用环境：Linux或Windows中的WSL。数据使用`.sas7bdat`文件；代码由Python 3.11运行，运行环境由`uv.lock`固定。工作站无需R、MATLAB、GPU或SuStaIn模型运行环境；本项目读取已经产出的WMH结果。
+适用环境：Linux或Windows中的WSL。数据使用`.sas7bdat`文件；代码由Python 3.11运行。Conda与uv两种安装方式使用同一组分析依赖版本，分别通过`requirements-conda.txt`与`uv.lock`安装。工作站无需R、MATLAB、GPU或SuStaIn模型运行环境；本项目读取已经产出的WMH结果。
 
 ## 1. 下载项目与安装环境
+
+### 方式A：已有Conda的工作站
+
+在克隆后的仓库根目录执行环境创建，保证环境文件中的相对路径能够找到依赖文件和本项目：
+
+```bash
+git clone https://github.com/zhenzonglin/WMH.git
+cd WMH
+conda env create -f environment.yml
+conda activate wmh-hcy
+python -m pip check
+python -m pytest -q
+wmh-hcy --help
+```
+
+如果此前已克隆项目，进入该目录执行`git pull --ff-only`后再创建环境。Conda环境名为`wmh-hcy`。安装过程使用Conda中的pip，不需要uv，也不会向base环境安装分析包。`libgomp`提供Linux下LightGBM需要的OpenMP运行库。
+
+后续操作直接执行：
+
+```bash
+wmh-hcy configure --sas-dir "/data/CNSRIII/SAS"
+wmh-hcy audit
+wmh-hcy configure --sustain-dir "/data/SuStaIn"
+wmh-hcy run --through prepare
+# 审阅病例流程后执行：
+wmh-hcy run --through report
+```
+
+下文的`uv run wmh-hcy ...`命令，在激活Conda后省略`uv run`即可。无法在批处理脚本中激活环境时，可以使用`conda run --no-capture-output -n wmh-hcy wmh-hcy audit`等对应命令。
+
+环境文件使用Conda官方支持的pip依赖段，分析依赖从既有锁文件导出，避免两种安装方式分别选择不同版本。[Conda环境管理文档](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html)。当前完整安装验证针对Linux/WSL，未验证Windows原生Conda。
+
+### 方式B：使用uv
 
 ```bash
 # 如系统尚无这些程序，可先安装。
@@ -131,4 +164,6 @@ uv run wmh-hcy demo --n 700
 
 第一轮完成后，可以提供`audit/SUMMARY.md`、`summary.json`和`hypothesis_counts.csv`的汇总内容，随后根据实际字段与病例交集修订配置。不要上传患者CSV或ID映射。要继续在工作站执行，可在该工作站打开克隆后的项目；当前电脑无法直接操作一台尚未连接的工作站。
 
-更新代码使用`git pull --ff-only`，随后`uv sync --frozen`。本机配置和输出已被Git忽略；不要使用强制添加将其纳入提交。
+更新代码使用`git pull --ff-only`。Conda用户激活`wmh-hcy`后执行`python -m pip install -r requirements-conda.txt`、`python -m pip install --no-deps -e .`和`python -m pip check`；uv用户执行`uv sync --frozen`。本机配置和输出已被Git忽略；不要使用强制添加将其纳入提交。
+
+维护者修改`uv.lock`后，应同时运行`uv export --frozen --no-emit-project --no-hashes --no-annotate --output-file requirements-conda.txt`更新Conda依赖清单。该导出步骤仅用于维护仓库，工作站安装和分析不需要uv。

@@ -1,0 +1,12 @@
+# Linux / WSL. Run from the repository root: conda env create -f environment.yml
+name: wmh-hcy
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - pip>=24
+  - libgomp
+  - pip:
+      - -r requirements-conda.txt
+      - -e .
