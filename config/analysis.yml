@@ -1,0 +1,34 @@
+mode: real
+output_dir: outputs/real
+inputs:
+  sas_globs: []  # Absolute workstation paths, e.g. /data/cnsr/*.sas7bdat
+  derivatives_root: ''  # Original Substain derivatives directory
+  participants_tsv: ''  # Optional original participants table for lesion_mask paths
+  imaging_csv: ''  # Optional already extracted image interface; see docs/data_contract.md
+  id_map_csv: ''  # Optional exact columns: participant_id,code_n
+  qc_csv: ''  # Optional modality review file; see docs/data_contract.md
+  clinical_csv: ''  # Set only for an explicitly selected pre-extracted whitelist CSV
+  clinical_formats_json: ''
+  gm119_labels_json: config/gm119_labels.json
+variable_sources: {}  # source variable -> exact SAS basename if multiple candidates exist
+sas:
+  encoding: null  # Override only when the reader reports an encoding issue
+  chunksize: 100000
+  id_width: null  # Explicit width only for numeric SAS IDs that require zero padding
+  date_formats: {}  # Explicit source -> date/datetime for unformatted numeric SAS dates
+imaging:
+  require_qc: true
+  path_prefix_map: {}  # Old absolute image path prefix -> new absolute prefix
+analysis:
+  seed: 20260912
+  horizon: 365
+  imputations: 50
+  mice_iterations: 10
+  mice_threads: 2
+  bootstrap_per_imputation: 200
+  spline_quantiles: [0.1, 0.5, 0.9]
+  risk_hcy_values: [10, 15]
+  risk_hcy_grid_points: 15
+  wmh_quantiles: [0.25, 0.5, 0.75]
+  run_t1_extension: true
+  run_sensitivity: true

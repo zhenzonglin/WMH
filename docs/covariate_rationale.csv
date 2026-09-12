@@ -1,0 +1,18 @@
+﻿variable,source,exposure_parent,outcome_parent,shared_cause_proxy,known_instrument,structural_descendant,selection,references,assumed_path,role_zh,coding,evidence_interpretation
+age,AGE,True,True,False,False,False,modified_disjunctive,HORD;NOMAS;RECURRENCE,年龄→代谢背景/Hcy；年龄→WMH与复发,暴露或结局原因,年龄采用三节点RCS,既有研究支持角色指定；箭头为本研究冻结的工作假设
+sex,GENDER,True,True,False,False,False,modified_disjunctive,HORD;NOMAS,性别→Hcy分布与血管风险,暴露或结局原因,按原始性别编码分类,既有研究支持角色指定；箭头为本研究冻结的工作假设
+b12,BSL_B12,True,True,False,False,False,modified_disjunctive,B12WMH;NIH,B12状态→Hcy再甲基化；B12状态→髓鞘及神经功能,共同背景原因,连续log2；作为调整因素,既有研究支持角色指定；箭头为本研究冻结的工作假设
+folate,BSL_B9,True,True,False,False,False,modified_disjunctive,HORD;FOLATE_OUTCOME,叶酸状态→Hcy代谢；营养背景→结局,暴露原因及营养背景代理,连续log2；与B12同时保留,既有研究支持角色指定；箭头为本研究冻结的工作假设
+cysc,BSL_CYSC,False,False,True,False,False,modified_disjunctive,HORD;SMART,肾功能→Hcy与血管/脑损伤；CYSC测量肾功能,共同原因代理,连续log2；肌酐替代作敏感性分析,既有研究支持角色指定；箭头为本研究冻结的工作假设
+smoking,H_SMK,True,True,False,False,False,modified_disjunctive,HORD;RECURRENCE,既往吸烟→Hcy与血管风险,暴露或结局原因,按字典四分类,既有研究支持角色指定；箭头为本研究冻结的工作假设
+drinking,H_DRINK,True,True,False,False,False,modified_disjunctive,HORD;FOLATE_OUTCOME,饮酒→营养/代谢状态及Hcy；饮酒→血管风险,暴露或结局原因,按字典四分类；不假设线性剂量,既有研究支持角色指定；箭头为本研究冻结的工作假设
+hypertension,H_HYPT,False,True,False,False,False,modified_disjunctive,NOMAS;RECURRENCE,既往高血压→小血管损伤及复发,结局原因,病史二分类,既有研究支持角色指定；箭头为本研究冻结的工作假设
+diabetes,H_DIAB,False,True,False,False,False,modified_disjunctive,NOMAS;RECURRENCE,既往糖尿病→微血管损伤及复发,结局原因,病史二分类,既有研究支持角色指定；箭头为本研究冻结的工作假设
+prior_stroke,H_STROKE,False,True,False,False,False,modified_disjunctive,RECURRENCE,既往卒中→当前脑结构/行为背景与再次事件,结局原因及既往损伤背景,病史二分类；v2移入核心集合,既有研究支持角色指定；箭头为本研究冻结的工作假设
+icv_ml,DLMUSE702,False,False,False,False,False,measurement_size,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,颅腔大小→测得绝对WMH/灰质体积,测量尺度,每100mL；独立于混杂集合添加,既有研究支持角色指定；箭头为本研究冻结的工作假设
+sample_day,I_BLDSAMP_DT - ONSET_D,False,False,False,False,False,measurement_time,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,急性期经过时间→测得Hcy,测量时点,每1天；实际日期相减,既有研究支持角色指定；箭头为本研究冻结的工作假设
+nihss,A_NIHSS,False,False,False,False,True,acute_state,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,背景脑损伤/急性卒中→NIHSS→功能,急性状态条件变量,仅H4及H2临床扩展,既有研究支持角色指定；箭头为本研究冻结的工作假设
+toast,IMG_C_TOAST,False,False,False,False,True,index_mechanism,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,背景血管病→本次卒中病因及急性事件,本次事件机制条件变量,仅H4及H2临床扩展,既有研究支持角色指定；箭头为本研究冻结的工作假设
+lesion_ml,acute_lesion_mask,False,False,False,False,True,acute_state,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,背景血管病/急性卒中→梗死负担→功能,急性损伤条件变量,仅H4及H2临床扩展,既有研究支持角色指定；箭头为本研究冻结的工作假设
+pre_mrs,H_MRS,False,False,False,False,False,prior_function,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,卒中前功能→12个月功能,H4指定的起点功能条件,按0–5有序分值线性调整,既有研究支持角色指定；箭头为本研究冻结的工作假设
+gm119_ml,GM119,False,False,False,False,False,structural_extension,OVERADJUST;WMH_FUNCTION;BRAIN_VOLUME,背景灰质结构→功能储备,H4结构补充,T1子样本每100mL,既有研究支持角色指定；箭头为本研究冻结的工作假设

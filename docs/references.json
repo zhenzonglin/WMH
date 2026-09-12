@@ -1,0 +1,219 @@
+{
+  "checked_on": "2026-09-12",
+  "references": [
+    {
+      "key": "NOMAS",
+      "authors": "Wright CB, Paik MC, Brown TR, et al.",
+      "title": "Total homocysteine is associated with white matter hyperintensity volume: the Northern Manhattan Study",
+      "journal": "Stroke",
+      "year": 2005,
+      "doi": "10.1161/01.STR.0000165923.02318.22",
+      "url": "https://doi.org/10.1161/01.STR.0000165923.02318.22",
+      "status": "Primary record checked 2026-09-12"
+    },
+    {
+      "key": "SMART",
+      "doi": "10.1212/WNL.0000000000000168",
+      "authors": "Kloppenborg RP, Geerlings MI, Visseren FL, et al.",
+      "title": "Homocysteine and progression of generalized small-vessel disease",
+      "journal": "Neurology",
+      "year": 2014,
+      "volume": "82",
+      "issue": "9",
+      "pages": "777-783",
+      "url": "https://doi.org/10.1212/WNL.0000000000000168",
+      "status": "Crossref metadata matched DOI; claims checked against primary records"
+    },
+    {
+      "key": "B12WMH",
+      "doi": "10.1136/jnnp.2008.149286",
+      "authors": "de Lau LML, Smith AD, Refsum H, et al.",
+      "title": "Plasma vitamin B12 status and cerebral white-matter lesions",
+      "journal": "Journal of Neurology, Neurosurgery &amp; Psychiatry",
+      "year": 2009,
+      "volume": "80",
+      "issue": "2",
+      "pages": "149-157",
+      "url": "https://doi.org/10.1136/jnnp.2008.149286",
+      "status": "Crossref metadata matched DOI; claims checked against primary records"
+    },
+    {
+      "key": "NIH",
+      "authors": "National Institutes of Health Office of Dietary Supplements.",
+      "title": "Vitamin B12 Fact Sheet for Health Professionals",
+      "journal": "NIH Office of Dietary Supplements",
+      "year": 2026,
+      "volume": "",
+      "issue": "",
+      "pages": "",
+      "url": "https://ods.od.nih.gov/factsheets/VitaminB12-HealthProfessional/",
+      "status": "Official primary institutional source checked 2026-09-12",
+      "accessed": "2026-09-12"
+    },
+    {
+      "key": "HORD",
+      "authors": "Nygård O, Refsum H, Ueland PM, Vollset SE.",
+      "title": "Major lifestyle determinants of plasma total homocysteine distribution: the Hordaland Homocysteine Study",
+      "journal": "American Journal of Clinical Nutrition",
+      "year": 1998,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/9459374/",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "HORD_METAB",
+      "authors": "Refsum H, Nurk E, Smith AD, et al.",
+      "title": "The Hordaland Homocysteine Study: A Community-Based Study of Homocysteine, Its Determinants, and Associations with Disease",
+      "journal": "Journal of Nutrition",
+      "year": 2006,
+      "url": "https://doi.org/10.1093/jn/136.6.1731S",
+      "status": "Cohort synthesis; used only for determinant background"
+    },
+    {
+      "key": "RECURRENCE",
+      "authors": "Weimar C, Diener HC, Alberts MJ, et al.",
+      "title": "The Essen stroke risk score predicts recurrent cardiovascular events: a validation within the REduction of Atherothrombosis for Continued Health (REACH) registry",
+      "journal": "Stroke",
+      "year": 2009,
+      "url": "https://doi.org/10.1161/STROKEAHA.108.521419",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "M3_HCY",
+      "authors": "Shi Z, Liu S, Guan Y, et al.",
+      "title": "Changes in total homocysteine levels after acute stroke and recurrence of stroke",
+      "journal": "Scientific Reports",
+      "year": 2018,
+      "url": "https://doi.org/10.1038/s41598-018-25398-5",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "FOLATE_OUTCOME",
+      "authors": "Shi M, Zheng J, Liu Y, et al.",
+      "title": "Folate, Homocysteine, and Adverse Outcomes After Ischemic Stroke",
+      "journal": "Journal of the American Heart Association",
+      "year": 2024,
+      "url": "https://doi.org/10.1161/JAHA.124.036527",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "WMH_FUNCTION",
+      "authors": "Griessenauer CJ, et al.",
+      "title": "Effects of White Matter Hyperintensities on 90-Day Functional Outcome after Large Vessel and Non-Large Vessel Stroke",
+      "journal": "Cerebrovascular Diseases",
+      "year": 2020,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32694259/",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "BRAIN_VOLUME",
+      "authors": "Schirmer MD, et al.",
+      "title": "Brain Volume: An Important Determinant of Functional Outcome After Acute Ischemic Stroke",
+      "journal": "Mayo Clinic Proceedings",
+      "year": 2020,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32370856/",
+      "status": "Primary bibliographic record checked 2026-09-12"
+    },
+    {
+      "key": "CNSR",
+      "doi": "10.1136/svn-2019-000242",
+      "authors": "Wang Y, Jing J, Meng X, et al.",
+      "title": "The Third China National Stroke Registry (CNSR-III) for patients with acute ischaemic stroke or transient ischaemic attack: design, rationale and baseline patient characteristics",
+      "journal": "Stroke and Vascular Neurology",
+      "year": 2019,
+      "volume": "4",
+      "issue": "3",
+      "pages": "158-164",
+      "url": "https://doi.org/10.1136/svn-2019-000242",
+      "status": "Crossref metadata matched DOI; claims checked against primary records"
+    },
+    {
+      "key": "VANDERWEELE",
+      "authors": "VanderWeele TJ.",
+      "title": "Principles of confounder selection",
+      "journal": "European Journal of Epidemiology",
+      "year": 2019,
+      "doi": "10.1007/s10654-019-00494-6",
+      "url": "https://doi.org/10.1007/s10654-019-00494-6",
+      "status": "Primary record checked 2026-09-12"
+    },
+    {
+      "key": "OVERADJUST",
+      "authors": "Schisterman EF, Cole SR, Platt RW.",
+      "title": "Overadjustment bias and unnecessary adjustment in epidemiologic studies",
+      "journal": "Epidemiology",
+      "year": 2009,
+      "doi": "10.1097/EDE.0b013e3181a819a1",
+      "url": "https://doi.org/10.1097/EDE.0b013e3181a819a1",
+      "status": "Primary record checked 2026-09-12"
+    },
+    {
+      "key": "WHITE",
+      "authors": "White IR, Royston P.",
+      "title": "Imputing missing covariate values for the Cox model",
+      "journal": "Statistics in Medicine",
+      "year": 2009,
+      "doi": "10.1002/sim.3618",
+      "url": "https://doi.org/10.1002/sim.3618",
+      "status": "Primary record checked 2026-09-12"
+    },
+    {
+      "key": "MICOX",
+      "authors": "Bonneville EF, Resche-Rigon M, Schetelig J, et al.",
+      "title": "Multiple imputation for cause-specific Cox models: Assessing methods for estimation and prediction",
+      "journal": "Statistical Methods in Medical Research",
+      "year": 2022,
+      "doi": "10.1177/09622802221102623",
+      "url": "https://doi.org/10.1177/09622802221102623",
+      "status": "Primary record checked 2026-09-12"
+    },
+    {
+      "key": "CUTOFF",
+      "doi": "10.1136/bmj.332.7549.1080",
+      "authors": "Altman DG, Royston P.",
+      "title": "The cost of dichotomising continuous variables",
+      "journal": "BMJ",
+      "year": 2006,
+      "volume": "332",
+      "issue": "7549",
+      "pages": "1080",
+      "url": "https://doi.org/10.1136/bmj.332.7549.1080",
+      "status": "Crossref metadata matched DOI; claims checked against primary records"
+    },
+    {
+      "key": "PHREG",
+      "title": "statsmodels PHReg: proportional hazards regression, entry and Efron ties",
+      "authors": "",
+      "journal": "Official documentation",
+      "year": 2026,
+      "url": "https://www.statsmodels.org/stable/generated/statsmodels.duration.hazard_regression.PHReg.html",
+      "status": "Official interface checked; tested versions in uv.lock"
+    },
+    {
+      "key": "ORDERED",
+      "title": "statsmodels OrderedModel: ordinal regression",
+      "authors": "",
+      "journal": "Official documentation",
+      "year": 2026,
+      "url": "https://www.statsmodels.org/stable/generated/statsmodels.miscmodels.ordinal_model.OrderedModel.html",
+      "status": "Official interface checked; tested versions in uv.lock"
+    },
+    {
+      "key": "MICE",
+      "title": "miceforest: multiple imputation with LightGBM",
+      "authors": "",
+      "journal": "Official documentation",
+      "year": 2026,
+      "url": "https://github.com/AnotherSamWilson/miceforest",
+      "status": "Official interface checked; tested versions in uv.lock"
+    },
+    {
+      "key": "PYREAD",
+      "title": "pyreadstat: SAS files, metadata and special missing values",
+      "authors": "",
+      "journal": "Official documentation",
+      "year": 2026,
+      "url": "https://github.com/Roche/pyreadstat",
+      "status": "Official interface checked; tested versions in uv.lock"
+    }
+  ]
+}

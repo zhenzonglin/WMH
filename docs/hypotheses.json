@@ -1,0 +1,69 @@
+[
+  {
+    "id": "H1",
+    "folder": "01_structure",
+    "title": "Hcy与背景白质损伤",
+    "hypothesis": "在C0及测量因素相同条件下，基线Hcy为15 μmol/L者的WMH负担高于10 μmol/L者。",
+    "null": "Δ1 = 0",
+    "direction": "Δ1 > 0",
+    "model": "HC3稳健标准误多变量线性回归",
+    "contrast": "fH(log2(15)) - fH(log2(10))",
+    "adjustment": "C0 + ICV + 采血距发病天数",
+    "family": "H1/H3/H4固定三项Holm",
+    "references": [
+      "NOMAS",
+      "SMART",
+      "B12WMH"
+    ]
+  },
+  {
+    "id": "H2",
+    "folder": "02_recurrence",
+    "title": "WMH修饰Hcy与复发的关联",
+    "hypothesis": "基线WMH越重，Hcy升高所对应的一年缺血性复发HR越大，即存在正向交互。",
+    "null": "βHW = 0",
+    "direction": "βHW > 0",
+    "model": "延迟入组原因别Cox；分别建模缺血性卒中和死亡",
+    "contrast": "H×W的1自由度Wald检验；补充WMH分位点的15对10绝对风险差",
+    "adjustment": "C0 + ICV + 采血距发病天数",
+    "family": "唯一主要假设；双侧α=0.05",
+    "references": [
+      "NOMAS",
+      "SMART",
+      "M3_HCY"
+    ]
+  },
+  {
+    "id": "H3",
+    "folder": "03_month3_update",
+    "title": "三个月Hcy提供后续风险更新",
+    "hypothesis": "在基线Hcy、WMH及C3相同条件下，三个月Hcy为15 μmol/L者的后续缺血性复发风险高于10 μmol/L者。",
+    "null": "Δ3 = 0",
+    "direction": "Δ3 > 0",
+    "model": "实际三个月采血日起的原因别Cox",
+    "contrast": "三个月Hcy非线性15对10的条件logHR；完整协方差Wald检验",
+    "adjustment": "C3 + 基线Hcy RCS + 基线Hcy×WMH + 两次采血时点 + ICV",
+    "family": "H1/H3/H4固定三项Holm",
+    "references": [
+      "M3_HCY",
+      "B12WMH"
+    ]
+  },
+  {
+    "id": "H4",
+    "folder": "04_function",
+    "title": "Hcy–WMH交互与一年功能结局",
+    "hypothesis": "在背景因素、本次卒中负担和卒中前功能相同条件下，WMH越重，Hcy升高所对应的12个月较差mRS共同OR越大。",
+    "null": "δHW = 0",
+    "direction": "δHW > 0",
+    "model": "12个月mRS 0–6有序logistic回归",
+    "contrast": "H×W的1自由度Wald检验；效应为共同OR之比",
+    "adjustment": "C4；另加ICV及采血时点，T1子样本补充GM119",
+    "family": "H1/H3/H4固定三项Holm",
+    "references": [
+      "FOLATE_OUTCOME",
+      "WMH_FUNCTION",
+      "BRAIN_VOLUME"
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+﻿question,references,existing_evidence,use_in_this_study
+H1,NOMAS;SMART,Hcy与WMH/小血管病有关,定量结构对比；现有证据不是CNSR-III的结果
+C0_B12,B12WMH;NIH,B12参与Hcy代谢及神经白质相关过程,主模型调整B12，不新增交互假设
+C0,HORD;HORD_METAB;RECURRENCE,代谢决定因素与复发背景,结合时间角色形成候选原因；不采用既有风险分数
+H2,NOMAS;SMART;M3_HCY,结构及Hcy预后分别有证据,Hcy×WMH为本研究推导的新假设
+H3,M3_HCY,急性期与恢复期Hcy和复发,相同基线风险下检验复测条件关联
+H4,FOLATE_OUTCOME;WMH_FUNCTION;BRAIN_VOLUME,Hcy、WMH、脑体积分别与功能有关,交互为新假设，T1为预设补充
+统计选择,VANDERWEELE;OVERADJUST,析取原因准则及过度调整,角色→准则→固定集合→运行记录

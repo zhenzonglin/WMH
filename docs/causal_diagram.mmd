@@ -1,0 +1,23 @@
+flowchart LR
+  C[年龄/性别/生活方式/既往血管病与卒中] --> H[基线Hcy]
+  C --> W[背景WMH]
+  C --> Y[复发或功能结局]
+  B[B12/叶酸状态] --> H
+  B --> W
+  B --> Y
+  K[肾功能背景] --> H
+  K --> W
+  K --> Y
+  K --> Q[CYSC：肾功能代理]
+  H --> Y
+  W --> Y
+  L[长期Hcy相关代谢背景] --> H
+  L --> W
+  L --> A[本次卒中负担/急性状态]
+  A --> H
+  W --> A
+  A --> Y
+  P[卒中前mRS] --> Y
+%% Working causal assumptions for adjustment. Arrows are not fitted results.
+%% H1/H2: background + measurement terms. H4: additionally condition on A and P.
+%% Hcy x WMH is a model term, not an extra biological node.

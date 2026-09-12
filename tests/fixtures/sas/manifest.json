@@ -1,0 +1,30 @@
+[
+  {
+    "file": "test_data__basic__sample.sas7bdat",
+    "url": "https://raw.githubusercontent.com/Roche/pyreadstat/master/test_data/basic/sample.sas7bdat",
+    "upstream_ref": "master; content hash frozen below",
+    "bytes": 131072,
+    "sha256": "007425379a0504f5c54a7c0bb8f9776670a2456d3692f37907d38e080ac4b07b"
+  },
+  {
+    "file": "test_data__basic__dates.sas7bdat",
+    "url": "https://raw.githubusercontent.com/Roche/pyreadstat/master/test_data/basic/dates.sas7bdat",
+    "upstream_ref": "master; content hash frozen below",
+    "bytes": 131072,
+    "sha256": "de733c885609425b1e0f1156e051325a9b44342afb2e5ad0dff977c8f8107faa"
+  },
+  {
+    "file": "test_data__basic__sample_bincompressed.sas7bdat",
+    "url": "https://raw.githubusercontent.com/Roche/pyreadstat/master/test_data/basic/sample_bincompressed.sas7bdat",
+    "upstream_ref": "master; content hash frozen below",
+    "bytes": 196608,
+    "sha256": "641254bdd950e65631701b3182868fe25c46a44e99854881f5c3751b2847848c"
+  },
+  {
+    "file": "test_data__missing_data__missing_test.sas7bdat",
+    "url": "https://raw.githubusercontent.com/Roche/pyreadstat/master/test_data/missing_data/missing_test.sas7bdat",
+    "upstream_ref": "master; content hash frozen below",
+    "bytes": 131072,
+    "sha256": "620f8eac41710b7ea4293a5ab4a0fb8d1fbc886fa5fa2d0d2165f45a7a10865c"
+  }
+]

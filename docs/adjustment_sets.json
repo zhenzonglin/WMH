@@ -1,0 +1,80 @@
+{
+  "C0_background": [
+    "age",
+    "sex",
+    "b12",
+    "folate",
+    "cysc",
+    "smoking",
+    "drinking",
+    "hypertension",
+    "diabetes",
+    "prior_stroke"
+  ],
+  "D0_measurement": [
+    "icv_ml",
+    "sample_day"
+  ],
+  "required_covariates_by_model": {
+    "H1": [
+      "age",
+      "sex",
+      "b12",
+      "folate",
+      "cysc",
+      "smoking",
+      "drinking",
+      "hypertension",
+      "diabetes",
+      "prior_stroke",
+      "icv_ml",
+      "sample_day"
+    ],
+    "H2": [
+      "age",
+      "sex",
+      "b12",
+      "folate",
+      "cysc",
+      "smoking",
+      "drinking",
+      "hypertension",
+      "diabetes",
+      "prior_stroke",
+      "icv_ml",
+      "sample_day"
+    ],
+    "H3": [
+      "age",
+      "sex",
+      "b123",
+      "folate3",
+      "cysc3",
+      "smoking",
+      "drinking",
+      "hypertension",
+      "diabetes",
+      "prior_stroke",
+      "icv_ml",
+      "sample_day"
+    ],
+    "H4": [
+      "age",
+      "sex",
+      "b12",
+      "folate",
+      "cysc",
+      "smoking",
+      "drinking",
+      "hypertension",
+      "diabetes",
+      "prior_stroke",
+      "icv_ml",
+      "sample_day",
+      "nihss",
+      "toast",
+      "lesion_ml",
+      "pre_mrs"
+    ]
+  }
+}

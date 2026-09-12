@@ -1,0 +1,40 @@
+﻿source,analysis_name,unit_or_type,allowed_codes,chinese_label,source_sheet,source_row
+code_n,patient_id,id,null,患者编号,基线+3个月+6个月+1年随访,2
+AGE,age,years,null,A3.年龄,基线+3个月+6个月+1年随访,4
+GENDER,sex,category,"[1, 2]",A2.性别:1-男性;2-女性,基线+3个月+6个月+1年随访,3
+D_DIAG,diagnosis,category,"[1, 2]",K1.1最终诊断:1-脑梗死;2-短暂性脑缺血,基线+3个月+6个月+1年随访,593
+BSL_HCY,hcy,umol/L,null,中心化测量:基线:血浆:同型半胱氨酸HCY(μmol/L);,生物样本,63
+BSL_B12,b12,pmol/L,null,中心化测量:基线:血清:维生素B12(pmol/L);,生物样本,12
+BSL_B9,folate,nmol/L,null,中心化测量:基线:血清:叶酸(nmol/L);,生物样本,13
+BSL_CYSC,cysc,mg/L,null,中心化测量:基线:血清:胱抑素C(mg/L);,生物样本,49
+BSL_Cr,creatinine,umol/L,null,"中心化测量:基线:血清:肌酐, 单位:μmol/L",生物样本,47
+H_SMK,smoking,category,"[1, 2, 3, 4]",D1.吸烟:1-从不吸烟;2-偶尔吸烟;3-目前吸烟;4-既往吸烟,基线+3个月+6个月+1年随访,168
+H_DRINK,drinking,category,"[1, 2, 3, 4]",D3.饮酒:1-从不饮酒;2-偶尔饮酒;3-目前饮酒;4-既往饮酒,基线+3个月+6个月+1年随访,175
+H_HYPT,hypertension,category,"[1, 2]",D5.高血压:1-否;2-是;98-不详,基线+3个月+6个月+1年随访,180
+H_DIAB,diabetes,category,"[1, 2]",D4.糖尿病:1-否;2-是;98-不详,基线+3个月+6个月+1年随访,178
+H_STROKE,prior_stroke,category,"[1, 2]",D8.卒中史:1-否;2-是;98-不详,基线+3个月+6个月+1年随访,188
+A_NIHSS,nihss,score,null,F7.12入院NIHSS总分,基线+3个月+6个月+1年随访,327
+IMG_C_TOAST,toast,category,"[1, 2, 3, 4, 5]",toast分型:1-大动脉粥样硬化型;2-心源性栓塞;3-小动脉闭塞;4-其他病因;5-病因不明,影像,878
+H_MRS,pre_mrs,score,null,"D14.发病前mRS评分:0=完全无症状;1=尽管有症状,但未见明显残疾:能完成所有经常从事的职责和活动;2=轻度残障:不能完成所有以前能从事的活动,但能处理个人事务而不需帮助;3=中度残障:需要一些协助,但行走不需要协助;4=重度残障:离开他人协助不能行走,以及不能照顾自己的身体需要;5=严重残障:卧床不起、大小便失禁、须持续护理和照顾",基线+3个月+6个月+1年随访,251
+F12_MRS,mrs12,score,null,"N12-2.1随访时神经功能评分(mRS):0-完全没有症状;1-尽管有症状,但未见明显残障；能完成所有经常从事的职责和活动;2-轻度残障；不能完成所有以前能从事的活动,但能处理个人事务而不需帮助;3-中度残障；需要一些协助,但行走不需要协助;4-重度残障；离开他人协助不能行走,以及不能照顾自己的身体需要;5-严重残障；卧床不起、大小便失禁、须持续护理和照顾",基线+3个月+6个月+1年随访,2811
+ONSET_D,onset_date,date,null,C1.发病日期(例:2015-02-02),基线+3个月+6个月+1年随访,3765
+I_BLDSAMP_DT,sample_date,datetime,null,H1.1血液标本采集时间(例:2015-02-0211:02),基线+3个月+6个月+1年随访,388
+IMG_ONSET_TO_MRI_D,mri_day,days,null,发病到MRI时间间隔,基线+3个月+6个月+1年随访,3794
+F3_BLDSAMP_D,sample3_date,date,null,P3-2.1血液标本采集时间,基线+3个月+6个月+1年随访,1787
+M03_HCY,hcy3,umol/L,null,中心化测量:3个月随访:血浆:同型半胱氨酸HCY(μmol/L);,生物样本,146
+M03_B12,b123,pmol/L,null,中心化测量:3个月随访:血清:维生素B12(pmol/L);,生物样本,137
+M03_B9,folate3,nmol/L,null,中心化测量:3个月随访:血清:叶酸(nmol/L);,生物样本,138
+M03_CYSC,cysc3,mg/L,null,"中心化测量:3个月随访:血清:胱抑素, 单位:mg/L; ",生物样本,141
+y1_is,is_event,category,"[0, 1]",N.12个月随访:发病365天内是否有缺血性卒中发作:0-否;1-是;,基线+3个月+6个月+1年随访,3741
+y1_is_dd,is_day,days,null,N.12个月随访:发病到缺血性卒中发作的时间间隔(day),基线+3个月+6个月+1年随访,3742
+D_DEATH,hospital_death,category,"[1, 2]",L:出院时情况:1-死亡;2-存活,基线+3个月+6个月+1年随访,641
+D_DEATH_D,hospital_death_date,date,null,"L1若死亡,则死亡日期",基线+3个月+6个月+1年随访,642
+F3_DATE,visit3_date,date,null,随访时间,基线+3个月+6个月+1年随访,1001
+F3_DEATH,death3,category,"[1, 2]",N3-1患者是否死亡:1-死亡;2-存活,基线+3个月+6个月+1年随访,1002
+F3_DEATH_D,death3_date,date,null,N3-1.1死亡日期,基线+3个月+6个月+1年随访,1003
+F6_DATE,visit6_date,date,null,随访时间,基线+3个月+6个月+1年随访,1933
+F6_DEATH,death6,category,"[1, 2]",N6-1患者是否死亡:1-死亡;2-存活,基线+3个月+6个月+1年随访,1934
+F6_DEATH_D,death6_date,date,null,"N6-1.1.1若死则亡,死亡日期",基线+3个月+6个月+1年随访,1935
+F12_DATE,visit12_date,date,null,随访时间,基线+3个月+6个月+1年随访,2806
+F12_DEATH,death12,category,"[1, 2]",N12-1患者是否死亡:1-死亡;2-存活,基线+3个月+6个月+1年随访,2807
+F12_DEATH_D,death12_date,date,null,"N12-1.2若死亡,死亡日期",基线+3个月+6个月+1年随访,2808
