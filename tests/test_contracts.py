@@ -14,7 +14,7 @@ from wmh_hcy.imputation import nelson_aalen_increment, pool_scalar
 def base_rows(n=1):
     return pd.DataFrame({
         "patient_id": [f"{i:04d}" for i in range(n)], "age": 60, "diagnosis": 1,
-        "image_valid": True, "hcy": 14., "sample_day": 2., "mri_day": 3.,
+        "image_valid": True, "hcy": 14., "sample_day": 2.,
         "is_event": 0., "is_day": np.nan, "last_contact_day": 365.,
         "death_day": np.nan, "death_date_missing": False, "sample3_day": 92.,
         "hcy3": 12., "mrs12": 2., "gm119_ml": 600., "t1_qc": "pass",
@@ -47,13 +47,32 @@ def test_early_recurrence_is_in_main_not_month3():
     assert c["month3"].empty
 
 
-@pytest.mark.parametrize("event_day", [2, 3])
+@pytest.mark.parametrize("event_day", [1, 2])
 def test_events_before_or_on_entry_excluded(event_day):
     d = base_rows()
     d.loc[0, ["is_event", "is_day"]] = [1, event_day]
     c, audit, _ = build_cohorts(d)
     assert c["main"].empty
     assert audit.exclusion_reason.iloc[0] == "no_event_before_or_on_entry"
+
+
+def test_entry_is_blood_draw_and_next_day_recurrence_is_retained():
+    d = base_rows()
+    d.loc[0, ["is_event", "is_day"]] = [1, 3]
+    c, _, _ = build_cohorts(d)
+    assert c["main"].entry.tolist() == [2]
+    assert c["main"].exit.tolist() == [3]
+    assert c["main"].event_type.tolist() == [1]
+    assert c["month3"].empty
+
+
+@pytest.mark.parametrize("sample_day", [np.nan, -1, np.inf])
+def test_blood_draw_time_is_still_required(sample_day):
+    d = base_rows()
+    d.loc[0, "sample_day"] = sample_day
+    cohorts, audit, _ = build_cohorts(d)
+    assert cohorts["main"].empty
+    assert audit.exclusion_reason.iloc[0] == "known_baseline_measurement_time"
 
 
 def test_death_is_competing_event_not_ischemic_recurrence():

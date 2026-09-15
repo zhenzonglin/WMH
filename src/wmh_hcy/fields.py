@@ -23,7 +23,6 @@ FIELDS = {
     "F12_MRS": ("mrs12", "score", None),
     "ONSET_D": ("onset_date", "date", None),
     "I_BLDSAMP_DT": ("sample_date", "datetime", None),
-    "IMG_ONSET_TO_MRI_D": ("mri_day", "days", None),
     "F3_BLDSAMP_D": ("sample3_date", "date", None),
     "M03_HCY": ("hcy3", "umol/L", None),
     "M03_B12": ("b123", "pmol/L", None),

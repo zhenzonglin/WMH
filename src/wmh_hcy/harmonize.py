@@ -76,7 +76,7 @@ def harmonize(cfg: dict) -> pd.DataFrame:
                 issues.append({"source": source, "missing_or_unparsed_count": int(bad_text.sum())})
             result[name] = x.astype(float)
     required = ["code_n", "AGE", "D_DIAG", "BSL_HCY", "y1_is", "y1_is_dd",
-                "ONSET_D", "I_BLDSAMP_DT", "IMG_ONSET_TO_MRI_D"]
+                "ONSET_D", "I_BLDSAMP_DT"]
     if set(required) & set(absent):
         raise DataError(f"Missing required columns: {sorted(set(required) & set(absent))}")
     for c, lower, upper in [("nihss", 0, 42), ("mrs12", 0, 5), ("pre_mrs", 0, 5)]:

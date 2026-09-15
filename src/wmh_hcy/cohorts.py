@@ -8,10 +8,13 @@ from .common import DataError, dump_json, outdir, record_run
 from .harmonize import harmonize
 from .imaging import read_imaging
 
+COHORT_ENTRY_RULE = "baseline_blood_draw_20260916"
+
 
 def build_cohorts(data: pd.DataFrame, horizon: float = 365) -> tuple[dict, pd.DataFrame, list]:
     d = data.copy()
-    d["entry"] = d[["sample_day", "mri_day"]].max(axis=1, skipna=False)
+    # The protocol enters follow-up at the observed baseline blood draw.
+    d["entry"] = d["sample_day"]
     d["event_day"] = d.is_day.where(d.is_event.eq(1))
     d["censor_day"] = d.last_contact_day.clip(upper=horizon)
     # A confirmed event/death is itself an observed contact, even if visit date is absent.
@@ -28,7 +31,7 @@ def build_cohorts(data: pd.DataFrame, horizon: float = 365) -> tuple[dict, pd.Da
         ("adult_ischemic_stroke", d.age.ge(18) & d.diagnosis.eq(1)),
         ("valid_wmh_icv_qc", d.image_valid.fillna(False).astype(bool)),
         ("observed_positive_baseline_hcy", np.isfinite(d.hcy) & d.hcy.gt(0)),
-        ("known_baseline_measurement_time", d.entry.notna() & d.sample_day.ge(0) & d.mri_day.ge(0)),
+        ("known_baseline_measurement_time", np.isfinite(d.entry) & d.entry.ge(0)),
         ("known_endpoint_status", d.is_event.isin([0, 1])),
         ("known_event_date_if_event", ~d.is_event.eq(1) | d.event_day.notna()),
         ("event_within_one_year", ~d.is_event.eq(1) | d.event_day.between(0, horizon)),
@@ -83,6 +86,8 @@ def prepare(cfg: dict) -> dict:
         summary[name] = {"n": len(frame), "ischemic_events": int(frame.event_type.eq(1).sum()),
                          "deaths_first": int(frame.event_type.eq(2).sum())}
     dump_json(out / "cohort_summary.json", summary)
+    dump_json(out / "cohort_contract.json", {"entry_rule": COHORT_ENTRY_RULE,
+              "definition": "entry = baseline sample date - onset date; MRI interval is not used"})
     record_run(cfg, "prepare", summary)
     if cohorts["main"].empty:
         raise DataError("Main cohort empty. Inspect prepared/flow.csv and exclusions.csv")

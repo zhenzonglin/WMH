@@ -29,7 +29,6 @@ def synthetic_frames(n: int = 900, seed: int = 20260912, interaction: float = 0.
     onset = pd.Timestamp("2020-01-01") + pd.to_timedelta(rng.integers(0, 120, n), unit="D")
     stamp = lambda days: (onset + pd.to_timedelta(days, unit="D")).strftime("%Y-%m-%d").to_numpy()
     sample_days = rng.integers(1, 5, n)
-    mri_days = rng.integers(1, 6, n)
     m3_days = rng.integers(80, 106, n)
     df = pd.DataFrame({
         "code_n": ids, "AGE": age, "GENDER": rng.integers(1, 3, n), "D_DIAG": np.ones(n, int),
@@ -40,7 +39,7 @@ def synthetic_frames(n: int = 900, seed: int = 20260912, interaction: float = 0.
         "H_STROKE": rng.integers(1, 3, n), "A_NIHSS": rng.poisson(5, n),
         "IMG_C_TOAST": rng.integers(1, 6, n), "H_MRS": rng.choice([0, 1, 2, 3], n),
         "ONSET_D": onset.strftime("%Y-%m-%d"), "I_BLDSAMP_DT": stamp(sample_days),
-        "IMG_ONSET_TO_MRI_D": mri_days, "F3_BLDSAMP_D": stamp(m3_days),
+        "F3_BLDSAMP_D": stamp(m3_days),
         "M03_HCY": hcy*np.exp(rng.normal(-0.05, 0.2, n)),
         "M03_B12": b12*np.exp(rng.normal(0.05, 0.2, n)),
         "M03_B9": folate*np.exp(rng.normal(0.05, 0.2, n)),

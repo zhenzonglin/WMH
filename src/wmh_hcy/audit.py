@@ -14,7 +14,7 @@ from .harmonize import sas_date
 from .sas_extract import inventory, iter_sas_chunks, resolve_owners
 
 BASE = ["code_n", "AGE", "GENDER", "D_DIAG", "BSL_HCY", "BSL_B12", "BSL_B9", "BSL_CYSC",
-        "H_SMK", "H_DRINK", "H_HYPT", "H_DIAB", "H_STROKE", "ONSET_D", "I_BLDSAMP_DT", "IMG_ONSET_TO_MRI_D"]
+        "H_SMK", "H_DRINK", "H_HYPT", "H_DIAB", "H_STROKE", "ONSET_D", "I_BLDSAMP_DT"]
 EVENT = ["y1_is", "y1_is_dd"]
 M3 = ["F3_BLDSAMP_D", "M03_HCY", "M03_B12", "M03_B9", "M03_CYSC"]
 FUNCTION = ["F12_MRS", "H_MRS", "A_NIHSS", "IMG_C_TOAST"]

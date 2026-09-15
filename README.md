@@ -121,7 +121,7 @@ uv run wmh-hcy report
 
 - `docs/statistical_analysis_plan.md`：研究问题、模型、时间和解释规则。
 - `docs/data_contract.md`：SAS、日期、ID和影像接口。
-- `docs/variable_dictionary.csv`：从用户字典逐项核实的39个源字段。
+- `docs/variable_dictionary.csv`：当前分析使用的38个源字段。
 - `docs/covariate_rationale.csv`：协变量角色和文献对应。
 - `docs/references.md`、`docs/evidence_matrix.csv`：文献及证据边界。
 - `presentations/CNSRIII_Hcy_WMH_假设驱动统计方案_v2.pptx`：28页假设驱动方法学汇报。

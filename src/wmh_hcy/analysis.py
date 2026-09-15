@@ -9,6 +9,7 @@ import pandas as pd
 
 from .absolute_risk import cumulative_incidence, risk_analysis
 from .adjustment import adjustment_columns, select_background, selection_registry
+from .cohorts import COHORT_ENTRY_RULE
 from .common import DataError, dump_json, outdir, read_json, record_run
 from .design import Design
 from .imputation import impute, required_covariates
@@ -17,6 +18,9 @@ from .models import cross_sectional, fit_cause, ordinal, pool_coefficients, pool
 
 
 def load_cohort(cfg: dict, name: str) -> pd.DataFrame:
+    contract = read_json(outdir(cfg) / "prepared/cohort_contract.json")
+    if contract.get("entry_rule") != COHORT_ENTRY_RULE:
+        raise DataError("Prepared cohorts use an older or unknown entry rule. Run prepare again after updating.")
     path = outdir(cfg) / f"prepared/cohort_{name}.csv"
     if not path.is_file():
         raise DataError("Prepared cohort absent. Run prepare first")

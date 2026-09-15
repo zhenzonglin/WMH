@@ -98,7 +98,7 @@ def doctor(cfg: dict) -> dict:
     if source_csv and resolve(cfg, source_csv).is_file():
         supplied.update(read_csv(resolve(cfg, source_csv)).columns)
     required = ["code_n", "AGE", "D_DIAG", "BSL_HCY", "y1_is", "y1_is_dd",
-                "ONSET_D", "I_BLDSAMP_DT", "IMG_ONSET_TO_MRI_D", "GENDER", "BSL_B12",
+                "ONSET_D", "I_BLDSAMP_DT", "GENDER", "BSL_B12",
                 "BSL_B9", "BSL_CYSC", "H_SMK", "H_DRINK", "H_HYPT", "H_DIAB", "H_STROKE"]
     image_paths = [cfg["inputs"].get(k) for k in ["derivatives_root", "imaging_csv"]]
     image_ready = any(p and resolve(cfg, p).exists() for p in image_paths)

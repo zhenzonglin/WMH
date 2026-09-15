@@ -39,7 +39,7 @@ def test_audit_preserves_leading_zeros_counts_people_and_needs_no_images(setup):
     result = clinical_audit(cfg)
     assert result["status"] == "READY_FOR_EXTRACTION"
     assert result["patients_in_selected_source_union"] == 100
-    assert result["whitelist_fields_present"] == 39
+    assert result["whitelist_fields_present"] == 38
     assert (root / "outputs/real/audit/report.html").is_file()
 
 
@@ -180,3 +180,73 @@ def test_pipeline_stops_at_failed_audit_and_records_status(setup):
 def test_date_special_missing_remains_missing():
     parsed = sas_date(pd.Series(["0", "A", ".Z", "_", ""], name="ONSET_D"), "DATE9")
     assert parsed.notna().tolist() == [True, False, False, False, False]
+
+
+def test_full_clinical_audit_and_prepare_without_mri_interval(setup):
+    root, cfg, clinical, _ = setup
+    from wmh_hcy.fields import FIELDS
+    from wmh_hcy.harmonize import harmonize
+
+    assert "IMG_ONSET_TO_MRI_D" not in FIELDS
+    assert "IMG_ONSET_TO_MRI_D" not in clinical
+    result = clinical_audit(cfg)
+    assert result["status"] == "READY_FOR_EXTRACTION"
+    assert result["whitelist_fields_expected"] == 38
+    assert result["required_missing"] == []
+    assert result["profiles"][0]["n_observed_all_listed_values"] == 100
+    assert result["profiles"][1]["n_observed_all_listed_values"] == 100
+    standardized = harmonize(cfg)
+    assert "mri_day" not in standardized
+    assert run_pipeline(cfg, "prepare")["status"] == "COMPLETED"
+    cohort = pd.read_csv(root / "outputs/real/prepared/cohort_main.csv")
+    assert len(cohort) > 0
+    assert cohort.entry.equals(cohort.sample_day)
+
+
+def test_old_prepared_cohorts_require_regeneration(setup):
+    root, cfg, _, _ = setup
+    from wmh_hcy.analysis import load_cohort
+
+    folder = root / "outputs/real/prepared"
+    folder.mkdir(parents=True)
+    pd.DataFrame({"patient_id": ["00001"], "entry": [10]}).to_csv(folder / "cohort_main.csv", index=False)
+    with pytest.raises(DataError, match="Run prepare again"):
+        load_cohort(cfg, "main")
+    assert run_pipeline(cfg, "prepare")["status"] == "COMPLETED"
+    assert len(load_cohort(cfg, "main")) > 0
+
+
+def test_four_sas_sources_extract_and_prepare_with_38_fields(setup, monkeypatch):
+    root, cfg, clinical, _ = setup
+    columns = [c for c in clinical if c != "code_n"]
+    tables = {}
+    for i in range(4):
+        path = root / f"source_{i}.sas7bdat"
+        path.touch()
+        tables[str(path)] = clinical[["code_n", *columns[i::4]]].copy()
+
+    def metadata(path, **kwargs):
+        assert kwargs.get("metadataonly")
+        frame = tables[str(path)]
+        meta = SimpleNamespace(column_names=list(frame), number_rows=len(frame),
+                               column_names_to_labels={}, original_variable_types={}, file_encoding="UTF-8")
+        return None, meta
+
+    def chunks(reader, path, **kwargs):
+        frame = tables[str(path)][kwargs["usecols"]]
+        meta = SimpleNamespace(missing_user_values={}, readstat_variable_types={})
+        yield frame.iloc[:50].copy(), meta
+        yield frame.iloc[50:].copy(), meta
+
+    monkeypatch.setattr(pyreadstat, "read_sas7bdat", metadata)
+    monkeypatch.setattr(pyreadstat, "read_file_in_chunks", chunks)
+    cfg["inputs"].update(clinical_csv="", sas_globs=[str(root / "*.sas7bdat")])
+    result = run_pipeline(cfg, "prepare")
+    census = result["stages"]["audit"]
+    assert result["status"] == "COMPLETED"
+    assert census["sas_or_csv_files"] == 4
+    assert census["whitelist_fields_present"] == census["whitelist_fields_expected"] == 38
+    assert census["patients_in_selected_source_union"] == 100
+    extracted = pd.read_csv(root / "outputs/real/extracted/clinical_raw.csv", dtype=str)
+    assert len(extracted) == 100 and len(extracted.columns) == 38
+    assert "IMG_ONSET_TO_MRI_D" not in extracted
