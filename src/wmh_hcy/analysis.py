@@ -12,6 +12,7 @@ from .adjustment import adjustment_columns, select_background, selection_registr
 from .cohorts import COHORT_ENTRY_RULE
 from .common import DataError, dump_json, outdir, read_json, record_run
 from .design import Design
+from .imaging import IMAGE_ELIGIBILITY_RULE, available_volume
 from .imputation import impute, required_covariates
 from .inference import decide_hypotheses, pooled_contrast, structural_curve
 from .models import cross_sectional, fit_cause, ordinal, pool_coefficients, pool_regression
@@ -19,8 +20,9 @@ from .models import cross_sectional, fit_cause, ordinal, pool_coefficients, pool
 
 def load_cohort(cfg: dict, name: str) -> pd.DataFrame:
     contract = read_json(outdir(cfg) / "prepared/cohort_contract.json")
-    if contract.get("entry_rule") != COHORT_ENTRY_RULE:
-        raise DataError("Prepared cohorts use an older or unknown entry rule. Run prepare again after updating.")
+    if (contract.get("entry_rule") != COHORT_ENTRY_RULE
+            or contract.get("image_eligibility_rule") != IMAGE_ELIGIBILITY_RULE):
+        raise DataError("Prepared cohorts use older or unknown eligibility rules. Run prepare again after updating.")
     path = outdir(cfg) / f"prepared/cohort_{name}.csv"
     if not path.is_file():
         raise DataError("Prepared cohort absent. Run prepare first")
@@ -100,7 +102,7 @@ def run_structural(data, cfg, folder):
 
 
 def run_functional(data, cfg, folder, kind="functional"):
-    data = data.loc[data.lesion_ml.notna() & data.lesion_qc.eq("pass")].copy()
+    data = data.loc[available_volume(data.lesion_ml, allow_zero=True)].copy()
     if data.empty:
         raise DataError("No patients with observed function and eligible acute lesion imaging")
     folder.mkdir(parents=True, exist_ok=True)
@@ -170,7 +172,7 @@ def analyse(cfg: dict, only: str | None = None) -> dict:
             execute("02_recurrence/raw_wmh", lambda: run_survival(raw, cfg, base / "raw_wmh", "H2_raw"))
             execute("02_recurrence/creatinine", lambda: run_survival(main, cfg, base / "creatinine", "H2_Cr",
                     spec=Design(renal="creatinine"), kind="creatinine"))
-            extended = main.loc[main.lesion_ml.notna() & main.lesion_qc.eq("pass")].copy()
+            extended = main.loc[available_volume(main.lesion_ml, allow_zero=True)].copy()
             execute("02_recurrence/acute_adjusted", lambda: run_survival(extended, cfg, base / "acute_adjusted",
                     "H2_acute", spec=Design(expanded=True), kind="extended"))
             early = main.loc[main.entry.lt(90)].copy()

@@ -10,7 +10,12 @@ import pandas as pd
 from .common import DataError, dump_json, outdir, read_csv, read_json, resolve, unique_ids
 
 VOLUMES = ["wmh_ml", "wmh_raw_ml", "icv_ml", "lesion_ml", "gm119_ml"]
-QC = ["wmh_qc", "icv_qc", "t1_qc", "lesion_qc"]
+IMAGE_ELIGIBILITY_RULE = "available_volumes_no_review_gate_20260916"
+
+
+def available_volume(values: pd.Series, *, allow_zero: bool = False) -> pd.Series:
+    """Basic numeric availability, independent of any image review label."""
+    return np.isfinite(values) & (values.ge(0) if allow_zero else values.gt(0))
 
 
 def mask_volume_ml(path: Path) -> float:
@@ -47,8 +52,7 @@ def read_subject(cfg: dict, subject: Path) -> dict:
     row = {"participant_id": str(w.get("participant_id", subject.name.removeprefix("sub-"))),
            "wmh_ml": corr.get("wmh_volume_after_correction_ml", np.nan),
            "wmh_raw_ml": corr.get("wmh_volume_before_correction_ml", np.nan),
-           "wmh_source": str(subject / "wmh/wmh_features.json") if w else str(subject / "status/wmh.json"),
-           **dict.fromkeys(QC, "unreviewed")}
+           "wmh_source": str(subject / "wmh/wmh_features.json") if w else str(subject / "status/wmh.json")}
     corrected = remap_path(cfg, corr.get("final_wmh", detail.get("corrected_wmh", "")),
                           subject / "wmh/contralateral/wmh_corrected_mask.nii.gz")
     original = remap_path(cfg, corr.get("original_wmh", detail.get("segmentation", "")),
@@ -113,13 +117,6 @@ def read_imaging(cfg: dict) -> pd.DataFrame:
             except (DataError, OSError, ValueError, KeyError) as exc:
                 issues.append({"participant_id": subject.name, "reason": str(exc)})
         frame = pd.DataFrame(records)
-        existing_qc = root / "tables/qc_reviews.tsv"
-        if existing_qc.is_file() and not frame.empty:
-            q = pd.read_csv(existing_qc, sep="\t", dtype=str, keep_default_na=False)
-            unique_ids(q, "participant_id", "qc_reviews.tsv")
-            state = q.set_index("participant_id")["review_state"]
-            for col in QC:
-                frame[col] = frame.participant_id.map(state).fillna("unreviewed")
         pt = cfg["inputs"].get("participants_tsv")
         if pt and not frame.empty:
             participants = pd.read_csv(resolve(cfg, pt), sep="\t", dtype=str, keep_default_na=False)
@@ -145,19 +142,8 @@ def read_imaging(cfg: dict) -> pd.DataFrame:
     unique_ids(frame, "participant_id", "imaging")
     for c in VOLUMES:
         frame[c] = pd.to_numeric(frame[c], errors="coerce") if c in frame else np.nan
-    for c in QC:
-        if c not in frame:
-            frame[c] = "unreviewed"
-        frame[c] = frame[c].astype(str).str.lower().replace({"true": "pass", "1": "pass",
-                                                           "false": "fail", "0": "fail"})
-    override = cfg["inputs"].get("qc_csv")
-    if override:
-        q = read_csv(resolve(cfg, override))
-        unique_ids(q, "participant_id", "modality QC")
-        for col in QC:
-            if col in q:
-                selected = frame.participant_id.map(q.set_index("participant_id")[col])
-                frame[col] = selected.where(selected.notna() & selected.ne(""), frame[col])
+    # Review columns in an existing CSV are retained as metadata only.
+    # Legacy require_qc / qc_csv settings and external review tables are not used.
     mapping = cfg["inputs"].get("id_map_csv")
     if mapping:
         ids = read_csv(resolve(cfg, mapping))
@@ -171,11 +157,9 @@ def read_imaging(cfg: dict) -> pd.DataFrame:
     frame.loc[unmatched].to_csv(outdir(cfg) / "unmapped_images.csv", index=False)
     frame = frame.loc[~unmatched].copy()
     unique_ids(frame, "patient_id", "mapped images")
-    frame["image_valid"] = (np.isfinite(frame.wmh_ml) & (frame.wmh_ml >= 0)
-                             & np.isfinite(frame.icv_ml) & (frame.icv_ml > 0)
+    frame["image_valid"] = (available_volume(frame.wmh_ml, allow_zero=True)
+                             & available_volume(frame.icv_ml)
                              & (frame.wmh_ml <= frame.icv_ml))
-    if cfg["imaging"]["require_qc"]:
-        frame["image_valid"] &= frame.wmh_qc.eq("pass") & frame.icv_qc.eq("pass")
     dump_json(outdir(cfg) / "image_adapter_issues.json", issues)
     frame.to_csv(outdir(cfg) / "imaging.csv", index=False)
     return frame

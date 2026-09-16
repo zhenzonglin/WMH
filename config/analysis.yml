@@ -6,7 +6,6 @@ inputs:
   participants_tsv: ''  # Optional original participants table for lesion_mask paths
   imaging_csv: ''  # Optional already extracted image interface; see docs/data_contract.md
   id_map_csv: ''  # Optional exact columns: participant_id,code_n
-  qc_csv: ''  # Optional modality review file; see docs/data_contract.md
   clinical_csv: ''  # Set only for an explicitly selected pre-extracted whitelist CSV
   clinical_formats_json: ''
   gm119_labels_json: config/gm119_labels.json
@@ -17,7 +16,6 @@ sas:
   id_width: null  # Explicit width only for numeric SAS IDs that require zero padding
   date_formats: {}  # Explicit source -> date/datetime for unformatted numeric SAS dates
 imaging:
-  require_qc: true
   path_prefix_map: {}  # Old absolute image path prefix -> new absolute prefix
 analysis:
   seed: 20260912

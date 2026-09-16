@@ -60,7 +60,6 @@ def synthetic_frames(n: int = 900, seed: int = 20260912, interaction: float = 0.
                         "icv_ml": np.clip(rng.normal(1450, 110, n), 1000, 2000),
                         "gm119_ml": rng.normal(610, 45, n)-1.5*(age-64)-3*w,
                         "lesion_ml": rng.exponential(6, n),
-                        "wmh_qc": "pass", "icv_qc": "pass", "t1_qc": "pass", "lesion_qc": "pass",
                         "wmh_source": "SYNTHETIC_GENERATOR", "icv_source": "SYNTHETIC_GENERATOR"})
     if missing:
         # MAR depends on observed age; missingness is not a real cohort characteristic.

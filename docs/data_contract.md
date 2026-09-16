@@ -25,16 +25,16 @@
 也可提供`inputs.imaging_csv`，列如下：
 
 ```text
-participant_id,wmh_ml,wmh_raw_ml,icv_ml,lesion_ml,gm119_ml,wmh_qc,icv_qc,t1_qc,lesion_qc
+participant_id,wmh_ml,wmh_raw_ml,icv_ml,lesion_ml,gm119_ml
 ```
 
 体积统一为mL。缺失T1或梗死体积只影响对应扩展分析。原始WMH缺失只影响该敏感性分析。
 
-## 质控和映射
+## 数据可用性和映射
 
-`wmh_qc/icv_qc/t1_qc/lesion_qc`取`pass/fail/unreviewed/stale`。原项目`tables/qc_reviews.tsv`的全局pass可用；全局fail或stale不会自动变为局部pass。可以用明确的模态复核CSV覆盖对应字段，列为`participant_id`及上述质控列。
+按研究者2026-09-16修订，影像人工质控不作为任何分析的入组条件。不读取`tables/qc_reviews.tsv`或`inputs.qc_csv`，旧配置的`imaging.require_qc`不再生效。既有影像CSV中的审核列可作为原始元数据保留，但任何审核状态均不参与病例选择，也不改写成通过。
 
-主分析要求WMH和ICV质控通过。人工未审阅不会被解释为通过。程序的体积合理性检查不能替代图像阅片。因原T1常模失败而未生成完整JSON的病例，可从已有原始702体积恢复ICV，但仍需对应质控合格。
+主分析要求WMH为有限非负数、ICV为有限正数、WMH不大于ICV，且临床ID精确匹配。T1子分析要求GM119为有限正数，急性梗死扩展分析要求梗死体积为有限非负数；缺失值不当作零。因原T1常模失败而未生成完整JSON的病例，可从已有原始702体积恢复ICV。文件读取、单位和ID检查继续执行，均属于数据可用性检查。
 
 临床ID和影像ID不一致时，提供`participant_id,code_n`映射CSV。需要选择重复扫描时先明确一例一条映射，不取“第一条”。移动过的影像绝对路径可用`imaging.path_prefix_map`修改目录前缀。
 
@@ -44,7 +44,7 @@ participant_id,wmh_ml,wmh_raw_ml,icv_ml,lesion_ml,gm119_ml,wmh_qc,icv_qc,t1_qc,l
 
 采用日精度。`entry=基线采血日−发病日`，风险区间为(entry, exit]。采血前或同日发生的事件单列排除；采血后3个月内的事件仍进入主分析。PHReg传入nextafter(entry,+∞)仅实现开放左端点，不创造临床事件时间。
 
-不读取或推算发病到MRI的天数。既有合格MRI作为基线结构表型，入组时间仅由基线采血日期确定。
+不读取或推算发病到MRI的天数。既有MRI产出作为基线结构表型，入组时间仅由基线采血日期确定。
 
 有效随访日期须有同次明确生存状态。已确认的缺血性事件或死亡本身也证明观察到相应日期。同日明确缺血性事件和死亡优先记录缺血性事件，不据此诊断致死性复发。
 
@@ -54,4 +54,4 @@ participant_id,wmh_ml,wmh_raw_ml,icv_ml,lesion_ml,gm119_ml,wmh_qc,icv_qc,t1_qc,l
 
 ## v2按假设的数据要求
 
-H1使用基线影像/代谢合格病例，不要求结局完整。H2从实际基线采血日进入风险集。H3使用实际M3采血日及同期HCY/B12/B9/CYSC，保留基线Hcy和WMH信息。H4要求mRS及合格急性损伤体积，T1另建子样本。H_STROKE进入v2核心调整集合。当前源字段白名单为38项。
+H1使用基线影像/代谢数据可用病例，不要求结局完整。H2从实际基线采血日进入风险集。H3使用实际M3采血日及同期HCY/B12/B9/CYSC，保留基线Hcy和WMH信息。H4要求mRS及可用急性损伤体积，T1另建子样本。H_STROKE进入v2核心调整集合。当前源字段白名单为38项。

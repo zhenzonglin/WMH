@@ -148,14 +148,68 @@ def test_sustain_ambiguity_requires_exact_derivatives_path(tmp_path):
     assert discover_sustain(tmp_path / "derivatives/first")["subject_directories"] == 1
 
 
-def test_image_join_uses_exact_ids_and_respects_qc(setup):
+def test_image_join_uses_exact_ids_without_review_gate(setup):
     root, cfg, _, images = setup
     images.loc[0, "participant_id"] = "0"  # Must not match clinical 00000.
     images.loc[1, "wmh_qc"] = "unreviewed"
     images.to_csv(root / "imaging.csv", index=False)
     result = image_audit(cfg)
     assert result["clinical_image_id_intersection"] == 99
-    assert result["wmh_icv_qc_eligible_matched"] == 98
+    assert result["wmh_icv_eligible_matched"] == 99
+    assert result["manual_image_review_required"] is False
+
+
+@pytest.mark.parametrize("state", [None, "unreviewed", "fail", "stale"])
+def test_prepare_ignores_review_labels_and_legacy_config(setup, state):
+    root, cfg, _, images = setup
+    if state is not None:
+        for col in ["wmh_qc", "icv_qc", "t1_qc", "lesion_qc"]:
+            images[col] = state
+    images.to_csv(root / "imaging.csv", index=False)
+    cfg["imaging"]["require_qc"] = True  # Old workstation settings must not re-enable the gate.
+    cfg["inputs"]["qc_csv"] = "missing_legacy_reviews.csv"
+    result = run_pipeline(cfg, "prepare")
+    assert result["status"] == "COMPLETED"
+    assert result["stages"]["image_audit"]["wmh_icv_eligible_matched"] == 100
+    assert result["stages"]["image_audit"]["t1_available_matched"] == 100
+    assert result["stages"]["image_audit"]["acute_lesion_available_matched"] == 100
+    cohorts = result["stages"]["prepare"]
+    assert cohorts["functional_t1"]["n"] == cohorts["functional"]["n"] > 0
+
+
+def test_image_availability_still_rejects_invalid_numeric_values(setup):
+    root, cfg, _, images = setup
+    images.loc[0, "wmh_ml"] = -1
+    images.loc[1, "icv_ml"] = 0
+    images.loc[2, "wmh_ml"] = np.inf
+    images.loc[3, "icv_ml"] = np.nan
+    images.loc[4, "wmh_ml"] = images.loc[4, "icv_ml"] + 1
+    images.loc[5, "wmh_ml"] = 0  # Zero burden is a valid observed value.
+    images.loc[6, "gm119_ml"] = np.inf
+    images.loc[7, "lesion_ml"] = -1
+    images.loc[8, "lesion_ml"] = 0
+    images.to_csv(root / "imaging.csv", index=False)
+    result = image_audit(cfg)
+    assert result["wmh_icv_eligible_matched"] == 95
+    assert result["t1_available_matched"] == 99
+    assert result["acute_lesion_available_matched"] == 99
+
+
+def test_automatic_review_table_is_not_read(setup):
+    root, cfg, _, _ = setup
+    from wmh_hcy.common import dump_json
+
+    derivative = root / "derivatives"
+    subject = derivative / "sub-00001"
+    dump_json(subject / "wmh/wmh_features.json", {
+        "participant_id": "00001", "contralateral_correction": {"wmh_volume_after_correction_ml": 10}})
+    dump_json(subject / "t1/t1_features.json", {"dlicv_icv": {"icv_label702_ml": 1500}})
+    (derivative / "tables").mkdir()
+    (derivative / "tables/qc_reviews.tsv").write_text("malformed obsolete review table\n")
+    cfg["inputs"].update(imaging_csv="", derivatives_root="derivatives")
+    result = image_audit(cfg)
+    assert result["wmh_icv_eligible_matched"] == 1
+    assert result["status"] == "READY_FOR_PREPARE"
 
 
 def test_pipeline_prepare_never_starts_statistics_and_audit_never_needs_images(setup, monkeypatch):
@@ -210,6 +264,12 @@ def test_old_prepared_cohorts_require_regeneration(setup):
     folder = root / "outputs/real/prepared"
     folder.mkdir(parents=True)
     pd.DataFrame({"patient_id": ["00001"], "entry": [10]}).to_csv(folder / "cohort_main.csv", index=False)
+    with pytest.raises(DataError, match="Run prepare again"):
+        load_cohort(cfg, "main")
+    # Cohorts from the previous blood-draw revision still have the old image gate.
+    from wmh_hcy.cohorts import COHORT_ENTRY_RULE
+    from wmh_hcy.common import dump_json
+    dump_json(folder / "cohort_contract.json", {"entry_rule": COHORT_ENTRY_RULE})
     with pytest.raises(DataError, match="Run prepare again"):
         load_cohort(cfg, "main")
     assert run_pipeline(cfg, "prepare")["status"] == "COMPLETED"

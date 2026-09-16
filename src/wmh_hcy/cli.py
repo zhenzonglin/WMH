@@ -17,7 +17,7 @@ def main() -> int:
     parser.add_argument("--sas-dir", help="SAS directory, recursively scanned; configure command")
     parser.add_argument("--sustain-dir", help="Original SuStaIn project or derivatives directory; configure command")
     parser.add_argument("--id-map", help="Exact participant_id,code_n CSV mapping; configure command")
-    parser.add_argument("--qc-csv", help="Existing modality QC CSV; configure command")
+    parser.add_argument("--qc-csv", help="Legacy argument, ignored; image review is not an eligibility condition")
     parser.add_argument("--through", choices=["audit", "prepare", "analyse", "report"], default="prepare")
     parser.add_argument("--n", type=int, default=900, help="Synthetic sample size for demo only")
     parser.add_argument("--hypothesis", choices=["H1", "H2", "H3", "H4"], help="Run one hypothesis; default runs H1-H4")

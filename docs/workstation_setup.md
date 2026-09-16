@@ -77,7 +77,7 @@ uv run wmh-hcy audit
 |`file_intersections.csv`|临床文件间共享独立ID数|
 |`sas_inventory.json`|原变量名、标签、SAS日期格式、文件编码与来源|
 
-**这些计数不是最终分析样本量。** 重复ID不会自动保留第一行；协变量散在缺失也不会仅因“完整病例计数较少”就被永久剔除。最终病例资格由影像QC、时间规则和各假设的变量要求共同确定。
+**这些计数不是最终分析样本量。** 重复ID不会自动保留第一行；协变量散在缺失也不会仅因“完整病例计数较少”就被永久剔除。最终病例资格由影像体积可用性、时间规则和各假设的变量要求共同确定。
 
 `READY_FOR_EXTRACTION`表示基础临床字段/编码检查可继续；`REVIEW_REQUIRED`表示需要按报告修正输入配置或数据问题。缺少可选子分析字段会在对应假设报告中列出。没有发现患者缺血事件时，事件时间全部为空本身不阻断提取，但不意味着能拟合复发模型。
 
@@ -121,19 +121,23 @@ uv run wmh-hcy configure --id-map "/data/mapping/image_clinical_ids.csv"
 
 映射CSV列为`participant_id,code_n`，前者对应原影像记录（通常包含`sub-`前缀）。不能确认映射的病例不会模糊匹配。源路径变化可在本机配置`imaging.path_prefix_map`中指定旧前缀到新前缀的替换。
 
-原有QC记录可从`derivatives/tables/qc_reviews.tsv`读取；也可显式传入模态QC CSV：
+按研究者修订，不需要影像人工质控，也无需提供QC表。旧配置中即使仍有`require_qc: true`或`qc_csv`，也不会据此阻断。既有CSV中的审核标签不参与筛选，不改写成通过。WMH和ICV按数值可用性纳入，T1灰质或急性病灶体积仅影响对应子分析。
+
+已完成SAS和影像接入的工作站，更新后可直接运行到分析报告：
 
 ```bash
-uv run wmh-hcy configure --qc-csv "/data/qc/modality_reviews.csv"
+git pull --ff-only
+python -m pip install --no-deps -e .
+wmh-hcy run --through report
 ```
 
-具体列和状态见`docs/data_contract.md`。未审核不会自动记为通过。影像未通过和未匹配的原因保存在本地输出。主队列不要求T1灰质或急性病灶子分析均完整。
+该命令会重新提取、连接并生成病例队列，再按H1–H4分析，避免沿用曾因审核状态排除病例的旧队列。无需重建Conda环境。
 
-`run --through prepare`依次执行：临床审计 → 白名单CSV提取 → 影像连接/QC计数 → 各假设病例清单。若某步发现阻断问题，后续步骤停止，状态保存在`outputs/real/pipeline_status.json`。
+`run --through prepare`依次执行：临床审计 → 白名单CSV提取 → 影像连接/体积可用性计数 → 各假设病例清单。若某步发现数据问题，后续步骤停止，状态保存在`outputs/real/pipeline_status.json`。
 
 重点审阅：
 
-- `audit/imaging_summary.json`：影像ID交集、全脑WMH与ICV可用性、QC通过人数。
+- `audit/imaging_summary.json`：影像ID交集、全脑WMH与ICV可用性，`wmh_icv_eligible_matched`为两种体积均可用且ID匹配的人数；`manual_image_review_required`固定为false。
 - `prepared/flow.csv`：各病例规则的纳入/排除数量。
 - `prepared/`各队列和排除记录：实际用于H1–H4的病例及原因；包含患者级信息，留在工作站。
 

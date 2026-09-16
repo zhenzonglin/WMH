@@ -6,7 +6,7 @@ import pandas as pd
 
 from .common import DataError, dump_json, outdir, record_run
 from .harmonize import harmonize
-from .imaging import read_imaging
+from .imaging import IMAGE_ELIGIBILITY_RULE, available_volume, read_imaging
 
 COHORT_ENTRY_RULE = "baseline_blood_draw_20260916"
 
@@ -29,7 +29,7 @@ def build_cohorts(data: pd.DataFrame, horizon: float = 365) -> tuple[dict, pd.Da
     # Documented ischemic event on the death date has priority. This does not infer fatal recurrence.
     conditions = [
         ("adult_ischemic_stroke", d.age.ge(18) & d.diagnosis.eq(1)),
-        ("valid_wmh_icv_qc", d.image_valid.fillna(False).astype(bool)),
+        ("available_wmh_icv", d.image_valid.fillna(False).astype(bool)),
         ("observed_positive_baseline_hcy", np.isfinite(d.hcy) & d.hcy.gt(0)),
         ("known_baseline_measurement_time", np.isfinite(d.entry) & d.entry.ge(0)),
         ("known_endpoint_status", d.is_event.isin([0, 1])),
@@ -63,10 +63,7 @@ def build_cohorts(data: pd.DataFrame, horizon: float = 365) -> tuple[dict, pd.Da
     func = main.copy()
     func.loc[func.death_day.notna() & func.death_day.le(horizon), "mrs12"] = 6
     func = func.loc[func.mrs12.isin(range(7))].copy()
-    if "t1_qc" in func:
-        t1 = func.loc[func.gm119_ml.notna() & func.gm119_ml.gt(0) & func.t1_qc.eq("pass")].copy()
-    else:
-        t1 = func.iloc[:0].copy()
+    t1 = func.loc[available_volume(func.gm119_ml)].copy()
     return {"main": main, "cross_sectional": xsec, "month3": m3,
             "functional": func, "functional_t1": t1}, audit, flow
 
@@ -87,6 +84,7 @@ def prepare(cfg: dict) -> dict:
                          "deaths_first": int(frame.event_type.eq(2).sum())}
     dump_json(out / "cohort_summary.json", summary)
     dump_json(out / "cohort_contract.json", {"entry_rule": COHORT_ENTRY_RULE,
+              "image_eligibility_rule": IMAGE_ELIGIBILITY_RULE,
               "definition": "entry = baseline sample date - onset date; MRI interval is not used"})
     record_run(cfg, "prepare", summary)
     if cohorts["main"].empty:

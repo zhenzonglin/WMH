@@ -147,7 +147,7 @@ def clinical_audit(cfg: dict) -> dict:
             complete &= ev.eq(0) | (ev.eq(1) & times.between(0, 365))
         profiles.append({"hypothesis": h, "missing_fields": ";".join(sorted(set(columns)-present)),
                          "n_observed_all_listed_values": int(complete.sum()),
-                         "interpretation": "Observed clinical overlap before MRI/QC/time eligibility; not final sample size"})
+                         "interpretation": "Observed clinical overlap before imaging availability and time eligibility; not final sample size"})
     comparisons = []
     for i, (a, aid) in enumerate(id_sets.items()):
         for b, bid in list(id_sets.items())[i+1:]:

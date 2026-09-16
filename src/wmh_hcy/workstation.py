@@ -35,8 +35,7 @@ def discover_sustain(directory: str | Path) -> dict:
     participants = next((p for p in [root / "participants.tsv", selected / "participants.tsv",
                                      selected.parent / "participants.tsv"] if p.is_file()), None)
     return {"derivatives_root": str(selected), "participants_tsv": str(participants) if participants else "",
-            "subject_directories": sum(p.is_dir() for p in selected.glob("sub-*")),
-            "existing_qc": (selected / "tables/qc_reviews.tsv").is_file()}
+            "subject_directories": sum(p.is_dir() for p in selected.glob("sub-*"))}
 
 
 def configure(config_path: str, sas_dir: str | None = None, sustain_dir: str | None = None,
@@ -62,7 +61,10 @@ def configure(config_path: str, sas_dir: str | None = None, sustain_dir: str | N
         detected = discover_sustain(sustain_dir)
         cfg["inputs"].update({k: detected[k] for k in ["derivatives_root", "participants_tsv"]})
         cfg["inputs"]["imaging_csv"] = ""
-    for key, value in [("id_map_csv", id_map), ("qc_csv", qc_csv)]:
+    # Keep accepting the legacy QC argument/config, without requiring its file.
+    cfg["inputs"].pop("qc_csv", None)
+    cfg["imaging"].pop("require_qc", None)
+    for key, value in [("id_map_csv", id_map)]:
         if value is not None:
             path = Path(value).expanduser().resolve()
             if not path.is_file():
@@ -79,7 +81,7 @@ def configure(config_path: str, sas_dir: str | None = None, sustain_dir: str | N
 
 
 def image_audit(cfg: dict) -> dict:
-    from .imaging import read_imaging
+    from .imaging import IMAGE_ELIGIBILITY_RULE, available_volume, read_imaging
 
     clinical_path = resolve(cfg, cfg["inputs"]["clinical_csv"]) if cfg["inputs"].get("clinical_csv") \
         else outdir(cfg) / "extracted/clinical_raw.csv"
@@ -96,16 +98,16 @@ def image_audit(cfg: dict) -> dict:
                "images_without_clinical_id": int((~matched).sum()),
                "whole_wmh_available": int((np.isfinite(frame.wmh_ml) & frame.wmh_ml.ge(0)).sum()),
                "true_icv_available": int((np.isfinite(frame.icv_ml) & frame.icv_ml.gt(0)).sum()),
-               "wmh_icv_qc_eligible_matched": int((matched & frame.image_valid).sum()),
-               "t1_qc_pass_matched": int((matched & frame.t1_qc.eq("pass") & frame.gm119_ml.notna()).sum()),
-               "acute_lesion_qc_pass_matched": int((matched & frame.lesion_qc.eq("pass") & frame.lesion_ml.notna()).sum()),
-               "wmh_qc_states": frame.wmh_qc.value_counts().to_dict(),
-               "icv_qc_states": frame.icv_qc.value_counts().to_dict()}
+               "wmh_icv_eligible_matched": int((matched & frame.image_valid).sum()),
+               "t1_available_matched": int((matched & available_volume(frame.gm119_ml)).sum()),
+               "acute_lesion_available_matched": int((matched & available_volume(frame.lesion_ml, allow_zero=True)).sum()),
+               "image_eligibility_rule": IMAGE_ELIGIBILITY_RULE,
+               "manual_image_review_required": False}
     unmatched_file = outdir(cfg) / "unmapped_images.csv"
     summary["unmapped_image_records"] = len(pd.read_csv(unmatched_file)) if unmatched_file.is_file() else 0
-    summary["status"] = "READY_FOR_PREPARE" if summary["wmh_icv_qc_eligible_matched"] > 0 else "REVIEW_REQUIRED"
+    summary["status"] = "READY_FOR_PREPARE" if summary["wmh_icv_eligible_matched"] > 0 else "REVIEW_REQUIRED"
     dump_json(outdir(cfg) / "audit/imaging_summary.json", summary)
-    rows = [{"measure": k, "count": v} for k, v in summary.items() if isinstance(v, int)]
+    rows = [{"measure": k, "count": v} for k, v in summary.items() if type(v) is int]
     pd.DataFrame(rows).to_csv(outdir(cfg) / "audit/imaging_counts.csv", index=False)
     return summary
 

@@ -17,7 +17,7 @@ def base_rows(n=1):
         "image_valid": True, "hcy": 14., "sample_day": 2.,
         "is_event": 0., "is_day": np.nan, "last_contact_day": 365.,
         "death_day": np.nan, "death_date_missing": False, "sample3_day": 92.,
-        "hcy3": 12., "mrs12": 2., "gm119_ml": 600., "t1_qc": "pass",
+        "hcy3": 12., "mrs12": 2., "gm119_ml": 600.,
     })
 
 

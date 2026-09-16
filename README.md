@@ -110,7 +110,7 @@ uv run wmh-hcy report
 ## 输出位置
 
 - `outputs/real/extracted/`：白名单原始CSV、元数据和来源清单。
-- `outputs/real/audit/`：SAS字段/人数审计、影像连接与质控计数。
+- `outputs/real/audit/`：SAS字段/人数审计、影像连接与体积可用性计数。影像人工质控标记不参与入组。
 - `outputs/real/pipeline_status.json`：本次分阶段运行状态与停止原因。
 - `outputs/real/prepared/`：主表、每个分析队列、病例流程及排除原因。
 - `outputs/real/results/<UTC时间>/`：本次分析的系数、诊断和风险曲线。
