@@ -174,7 +174,7 @@ uv run wmh-hcy demo --n 700
 
 维护者修改`uv.lock`后，应同时运行`uv export --frozen --no-emit-project --no-hashes --no-annotate --output-file requirements-conda.txt`更新Conda依赖清单。该导出步骤仅用于维护仓库，工作站安装和分析不需要uv。
 
-## 6. 只能截图时：两页诊断摘要
+## 6. 只能截图时：诊断摘要
 
 在已完成分析的工作站执行以下命令。摘要脚本只使用Python标准库，无需重新安装项目或重新运行分析。
 
@@ -195,6 +195,16 @@ python scripts/diagnose_results.py --page 2
 默认读取本项目`outputs/real/latest_results.json`指向的结果。若输出位置自定义，加`--output-dir /实际输出目录`；若需检查指定批次，再加`--results /实际结果批次目录`。两页应使用相同路径参数。缺少诊断文件会显示MISSING，不需要为了生成摘要重新分析。
 
 摘要中prepared病例计数来自当前准备目录，并非本批次模型保存的快照；与模型人数不一致时会提示。插补均值和描述性PH检验仅用于定位问题，不能单独判定插补收敛、MAR或比例优势假设成立。摘要不足以定位时，再根据具体行定向截取一个文件。
+
+若H2绝对风险bootstrap不稳定或H3死亡模型报错，再执行：
+
+```bash
+python scripts/diagnose_results.py --page 3
+```
+
+第三页在工作站本地读取`prepared/cohort_main.csv`、`cohort_month3.csv`与该批次的`analysis_participants.csv`，先逐一核对患者ID、进入时间、结束时间、事件类型和模型人数。一致后，显示六个预设分类变量各类别的总人数、缺血事件数和死亡事件数，以及已保存死亡模型的系数和标准误范围摘要。输出仅为汇总，不显示患者ID、不联网、不写文件、不重新拟合。与前两页不同，此页需要读取本地患者行；只需截图终端输出。
+
+MATCH仅表示成员、时间、事件与模型批次一致；分类变量取自当前prepare文件、尚未插补，不代表已核验全部历史协变量。少数或零死亡的类别是定位稀疏数据的线索，不能单独证明Cox分离，也不据此自动删除协变量。若显示MISMATCH或UNAVAILABLE，保留截图，不为获得诊断而重建队列或重跑模型。第三页目前只适用于一年H2/H3，不与`--longterm`组合。
 
 ## 7. 新增2、3、4、5年分析
 

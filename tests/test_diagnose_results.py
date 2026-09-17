@@ -1,8 +1,11 @@
 """Standalone reporter tests: no analysis dependencies or patient data."""
 
+import csv
 import importlib.util
 import json
 from pathlib import Path
+
+import pytest
 
 SPEC = importlib.util.spec_from_file_location(
     "diagnose_results", Path(__file__).resolve().parents[1] / "scripts/diagnose_results.py"
@@ -147,3 +150,91 @@ def test_longterm_screenshots_use_separate_pointer(tmp_path, monkeypatch, capsys
     assert REPORTER.main() == 0
     text = capsys.readouterr().out
     assert "year2/H2" in text and "120" in text and "SUPPLEMENTARY" in text
+
+
+def write_csv(path, rows, fields):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def page_three_fixture(tmp_path):
+    root = tmp_path / "results/test-run"
+    rows = [
+        {"patient_id": "PRIVATE_001", "entry": "3", "exit": "100", "event_type": "1.0"},
+        {"patient_id": "PRIVATE_002", "entry": "3", "exit": "120", "event_type": "2"},
+        {"patient_id": "PRIVATE_003", "entry": "3", "exit": "365", "event_type": "0"},
+    ]
+    for row in rows:
+        row.update({name: "1.0" for name in REPORTER.CORE_LEVELS})
+    rows[1]["sex"] = "2"
+    rows[1]["hypertension"] = ""
+    rows[2]["smoking"] = "PRIVATE_BAD_CODE"
+    for label, name in [("H2", "main"), ("H3", "month3")]:
+        write_csv(root / REPORTER.MODELS[label] / "analysis_participants.csv", rows,
+                  REPORTER.PARTICIPANT_FIELDS)
+        write_csv(tmp_path / f"prepared/cohort_{name}.csv", rows,
+                  REPORTER.PARTICIPANT_FIELDS + tuple(REPORTER.CORE_LEVELS))
+    status = {"mode": "synthetic", "analyses": {
+        REPORTER.MODELS[label]: {"n": 3} for label in ("H2", "H3")}}
+    write_json(root / "status.json", status)
+    write_json(tmp_path / "latest_results.json", {"path": str(root)})
+    return root, rows, status
+
+
+def test_page_three_counts_privacy_and_readonly_command(tmp_path, monkeypatch, capsys):
+    root, _, _ = page_three_fixture(tmp_path)
+    write_csv(root / "02_recurrence/death_coefficients.csv",
+              [{"estimate": "-2", "se": "0.5"}, {"estimate": "0.2", "se": "1.5"}],
+              ("estimate", "se"))
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    monkeypatch.setattr("sys.argv", ["diagnose_results.py", "--output-dir", str(tmp_path), "--page", "3"])
+    assert REPORTER.main() == 0
+    text = capsys.readouterr().out
+    assert "H2: MATCH; N=3; IS=1; death=1; censored=1" in text
+    assert "sex: 1:2/1/0  2:1/0/1" in text
+    assert "MISS:1/0/1" in text and "INVALID:1/0/0" in text
+    assert "max|beta|=2; max SE=1.5" in text
+    assert "local patient rows summarized" in text
+    assert "PRIVATE" not in text
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("change", ["id", "entry", "exit", "event_type", "duplicate", "status_n"])
+def test_page_three_refuses_stale_or_duplicate_cohort(tmp_path, change):
+    root, rows, status = page_three_fixture(tmp_path)
+    if change == "id":
+        rows[0]["patient_id"] = "PRIVATE_NEW_ID"
+    elif change in ("entry", "exit", "event_type"):
+        rows[0][change] = {"entry": "4", "exit": "101", "event_type": "2"}[change]
+    elif change == "duplicate":
+        rows[0]["patient_id"] = rows[1]["patient_id"]
+    else:
+        status["analyses"]["02_recurrence"]["n"] = 4
+    write_csv(tmp_path / "prepared/cohort_main.csv", rows,
+              REPORTER.PARTICIPANT_FIELDS + tuple(REPORTER.CORE_LEVELS))
+    text = "\n".join(REPORTER.page_three(root, tmp_path, status))
+    h2 = text.split("H2:", 1)[1].split("H3:", 1)[0]
+    assert "MATCH;" not in h2 and "sex:" not in h2
+    assert "PRIVATE" not in text
+    assert "H3: MATCH;" in text
+
+
+def test_page_three_missing_inputs_are_explicit(tmp_path):
+    text = "\n".join(REPORTER.page_three(tmp_path, tmp_path, {}))
+    assert text.count("UNAVAILABLE/INVALID inputs") == 2
+
+
+def test_page_three_preserves_leading_zero_ids():
+    rows = [{"patient_id": value, "entry": "1", "exit": "365", "event_type": "0"}
+            for value in ("001", "1")]
+    assert len(REPORTER.participant_index(rows)) == 2
+
+
+def test_page_three_rejects_longterm(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["diagnose_results.py", "--longterm", "--page", "3"])
+    with pytest.raises(SystemExit) as exc:
+        REPORTER.main()
+    assert exc.value.code == 2

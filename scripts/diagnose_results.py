@@ -1,4 +1,4 @@
-"""Read-only, two-page aggregate diagnostics; Python standard library only."""
+"""Read-only screenshot diagnostics; Python standard library only."""
 
 from __future__ import annotations
 
@@ -11,6 +11,11 @@ from collections import Counter
 from pathlib import Path
 
 MODELS = {"H1": "01_structure", "H2": "02_recurrence", "H3": "03_month3_update", "H4": "04_function"}
+CORE_LEVELS = {
+    "sex": (1, 2), "smoking": (1, 2, 3, 4), "drinking": (1, 2, 3, 4),
+    "hypertension": (1, 2), "diabetes": (1, 2), "prior_stroke": (1, 2),
+}
+PARTICIPANT_FIELDS = ("patient_id", "entry", "exit", "event_type")
 
 
 def read_json(path: Path) -> object:
@@ -204,15 +209,103 @@ def page_two(root: Path) -> list[str]:
     return lines
 
 
+def read_selected_csv(path: Path, fields: tuple[str, ...]) -> list[dict]:
+    """Read only named columns; callers must never print raw rows or errors."""
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not set(fields).issubset(reader.fieldnames or []):
+            raise ValueError("Required columns absent")
+        return [{name: row[name] for name in fields} for row in reader]
+
+
+def participant_index(rows: list[dict]) -> dict[str, tuple[float, float, float]]:
+    index = {}
+    for row in rows:
+        patient = row["patient_id"]
+        times = numbers(row[name] for name in PARTICIPANT_FIELDS[1:])
+        if (not patient or patient in index or len(times) != 3
+                or times[0] < 0 or times[1] <= times[0] or times[2] not in (0, 1, 2)):
+            raise ValueError("Invalid participant record")
+        index[patient] = tuple(times)
+    return index
+
+
+def page_three(root: Path, output: Path, status: dict) -> list[str]:
+    lines = [
+        "[3] DEATH-EVENT DISTRIBUTION (LOCAL ROWS -> AGGREGATE COUNTS ONLY)",
+        "Check: exact IDs + entry/exit + event type against the saved model-run list.",
+        "Cells are observed category: N/IS-first/death-first; MISS includes empty/NaN.",
+    ]
+    for label, name in [("H2", "main"), ("H3", "month3")]:
+        folder = root / MODELS[label]
+        try:
+            frozen = read_selected_csv(folder / "analysis_participants.csv", PARTICIPANT_FIELDS)
+            current = read_selected_csv(
+                output / f"prepared/cohort_{name}.csv", PARTICIPANT_FIELDS + tuple(CORE_LEVELS)
+            )
+            frozen_index = participant_index(frozen)
+            current_index = participant_index(current)
+        except (OSError, ValueError, KeyError, TypeError, csv.Error):
+            lines.append(f"{label}: UNAVAILABLE/INVALID inputs; no category counts printed.")
+            continue
+        saved_n = status.get("analyses", {}).get(MODELS[label], {}).get("n")
+        if not frozen_index or frozen_index != current_index or saved_n != len(frozen_index):
+            lines.append(f"{label}: MISMATCH/EMPTY run list, current cohort or saved n; counts withheld.")
+            continue
+        event_counts = Counter(int(item[2]) for item in frozen_index.values())
+        lines.append(
+            f"{label}: MATCH; N={len(current)}; IS={event_counts[1]}; death={event_counts[2]}; "
+            f"censored={event_counts[0]}"
+        )
+        for variable, levels in CORE_LEVELS.items():
+            cells = {str(level): Counter() for level in levels}
+            cells.update(MISS=Counter(), INVALID=Counter())
+            for row in current:
+                raw = row[variable]
+                value = numbers([raw])
+                if value and value[0] in levels:
+                    key = str(int(value[0]))
+                elif raw is None or raw.strip().lower() in ("", "nan", "na", "none"):
+                    key = "MISS"
+                else:
+                    key = "INVALID"
+                cells[key][int(float(row["event_type"]))] += 1
+            text = []
+            for key, counts in cells.items():
+                if key in ("MISS", "INVALID") and not counts:
+                    continue
+                text.append(f"{key}:{sum(counts.values())}/{counts[1]}/{counts[2]}")
+            lines.append(f"  {variable}: " + "  ".join(text))
+        path = folder / "death_coefficients.csv"
+        try:
+            coefficients = read_selected_csv(path, ("estimate", "se"))
+            max_beta = max((abs(v) for v in numbers(r["estimate"] for r in coefficients)), default=None)
+            max_se = max(numbers(r["se"] for r in coefficients), default=None)
+            lines.append(
+                f"  Saved death model: {len(coefficients)} terms; "
+                f"max|beta|={span([max_beta])}; max SE={span([max_se])}"
+            )
+        except (OSError, ValueError, KeyError, TypeError, csv.Error):
+            lines.append("  Saved death model: MISSING/UNREADABLE")
+    lines.extend([
+        "Matching verifies membership/times/events only; covariates are CURRENT, pre-imputation.",
+        "Few/zero deaths in a cell flag sparse data, not proof of Cox separation.",
+        "No fitting, imputation, variable selection, file writes or patient IDs in this output.",
+    ])
+    return lines
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--page", type=int, choices=[1, 2], default=1)
+    parser.add_argument("--page", type=int, choices=[1, 2, 3], default=1)
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "outputs/real"
     )
     parser.add_argument("--results", type=Path, help="Optional exact result batch directory")
     parser.add_argument("--longterm", action="store_true", help="Summarize the separate 2-5 year extension")
     args = parser.parse_args()
+    if args.longterm and args.page == 3:
+        parser.error("--page 3 checks the one-year H2/H3 cohorts only; omit --longterm.")
     if args.longterm:
         args.output_dir = args.output_dir / "longterm"
     root = args.results
@@ -229,7 +322,8 @@ def main() -> int:
         print("No readable status.json in the selected result directory.")
         return 2
     print(f"WMH DIAGNOSTICS | run={root.name} | mode={status.get('mode', 'NA')}")
-    print("READ ONLY: aggregate files; no patient rows; no analysis is rerun.")
+    print("READ ONLY: local patient rows summarized; no IDs printed; no fitting or file writes."
+          if args.page == 3 else "READ ONLY: aggregate files; no patient rows; no analysis is rerun.")
     if args.longterm:
         print("SUPPLEMENTARY 2-5 YEAR ANALYSES | " + str(status.get("status", "NA")))
         if args.page == 1:
@@ -261,7 +355,13 @@ def main() -> int:
                     print(f"{name} failure: {reason_group(row.get('reason'))}")
         print("No long-term competing-death absolute risk is calculated.")
         return 0
-    for line in page_one(root, args.output_dir, status) if args.page == 1 else page_two(root):
+    if args.page == 1:
+        lines = page_one(root, args.output_dir, status)
+    elif args.page == 2:
+        lines = page_two(root)
+    else:
+        lines = page_three(root, args.output_dir, status)
+    for line in lines:
         print(line)
     return 0
 
