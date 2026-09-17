@@ -1,0 +1,13 @@
+step,remaining,excluded_here
+clinical_image_union,2400,0
+adult_ischemic_stroke,2400,0
+available_true_icv,2400,0
+available_wmh_ml,2400,0
+alive_at_month3,2400,0
+observed_recovery_sbp,2399,1
+known_actual_visit_day,2399,0
+known_five_year_status_and_time,2399,0
+consistent_first_recurrence,2399,0
+no_recurrence_before_or_on_visit,2342,57
+no_observation_after_dated_death,2310,32
+followup_after_visit,2310,0

@@ -1,0 +1,11 @@
+analysis,study,tier,family,status,n,outcome_unknown,parameters,imputations,p,statistic,df1,df2,r,method,m,p_bh_secondary
+primary,recovery,primary,multinomial,ESTIMATED,1822,0,66,2,1.794046641505047e-10,22.441380465520673,2,152726996.33558488,9.911303299024149e-05,D1 pooled multivariate Wald,2,
+complete_case,recovery,sensitivity,multinomial,ESTIMATED,1733,0,66,1,1.5258869758300132e-10,22.60327506546338,2,inf,0.0,D1 pooled multivariate Wald,1,
+month12,recovery,secondary,multinomial,ESTIMATED,1834,0,66,2,4.672522059454533e-14,30.69449232360927,2,298750783190.5718,2.2407431447274037e-06,D1 pooled multivariate Wald,2,4.672522059454533e-14
+month24,recovery,secondary,multinomial,ESTIMATED,1801,0,66,2,6.255806778282201e-21,46.520777296969996,2,4694166655.699876,1.787615620258606e-05,D1 pooled multivariate Wald,2,2.5023227113128805e-20
+month36,recovery,secondary,multinomial,ESTIMATED,1826,0,66,2,4.364139813335651e-19,42.275706637192044,2,162836361.0253999,9.598682351806517e-05,D1 pooled multivariate Wald,2,8.728279626671302e-19
+month48,recovery,secondary,multinomial,ESTIMATED,1818,0,66,2,2.8039338397069366e-18,40.41551019187393,2,863369154.1578087,4.168362382141793e-05,D1 pooled multivariate Wald,2,3.738578452942582e-18
+actual_improvement,recovery,sensitivity,multinomial,ESTIMATED,1238,0,66,2,1.559024330948465e-08,17.976624238051453,2,87557509.62371245,0.00013090486188121927,D1 pooled multivariate Wald,2,
+raw_wmh,recovery,sensitivity,multinomial,ESTIMATED,1822,0,66,2,1.7706373495581723e-10,22.45451155640607,2,2616085715.20339,2.3945838230893356e-05,D1 pooled multivariate Wald,2,
+dependent_or_dead,recovery,sensitivity,binary,ESTIMATED,1822,0,33,2,1.5014870358478923e-07,15.711640030552909,2,697599051.8736067,4.637274748401385e-05,D1 pooled multivariate Wald,2,
+observation_weighted,recovery,sensitivity,multinomial,ESTIMATED,1822,143,66,2,9.192375950796517e-11,23.11006166634256,2,6442385798.423799,1.525909904749585e-05,D1 pooled multivariate Wald,2,

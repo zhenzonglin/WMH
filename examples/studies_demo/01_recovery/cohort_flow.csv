@@ -1,0 +1,11 @@
+step,remaining,excluded_here
+clinical_image_union,2400,0
+adult_ischemic_stroke,2400,0
+available_true_icv,2400,0
+available_wmh_ml,2400,0
+available_gm119_ml,2400,0
+available_lesion_ml,2400,0
+alive_at_month3,2400,0
+independent_at_month3,1965,435
+no_five_year_state_contradiction,1965,0
+known_five_year_functional_state,1822,143

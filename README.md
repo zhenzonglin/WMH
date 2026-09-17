@@ -1,10 +1,28 @@
-# CNSR-III：Hcy–WMH五年首次缺血性复发分析 v3
+# CNSR-III：影像与长期预后五项独立研究
+
+当前新增研究为：早期功能独立后的远期失能、恢复期血压与WMH、神经酰胺与脑损伤表型、CEC与灰质结构、脑肾微血管损伤。五个队列分别建立，不要求Hcy，不以其他研究的检测完整性限制入组。
+
+```bash
+conda activate wmh-hcy
+git pull --ff-only
+python -m pip install --no-deps -e .
+wmh-study audit --study all
+# 核对对应队列审计后，例如先运行恢复研究：
+wmh-study run --study recovery --through report
+wmh-study summary --page 1
+```
+
+[五项统计方案](docs/five_studies_plan.md) · [Word方案](docs/CNSRIII_五项独立研究统计分析方案_20260917.docx) · [工作站操作](docs/five_studies_workstation.md) · [软件验证](docs/five_studies_validation.md)。复用现有多SAS、SuStaIn与精确ID配置；Python 3.11、Conda兼容。新结果写入 `outputs/real/studies/`。既有Hcy研究接口和历史结果保留，以下内容是历史方案说明。
+
+---
+
+## 历史研究 Hcy–WMH五年首次缺血性复发分析 v3
 
 这是基于既有WMH分割产物和已提供临床字段的纯Python分析项目。支持Ubuntu或WSL工作站，不依赖R，也不使用中心变量。
 
 **仓库包含代码、方法学材料和合成数据验证。真实患者分析在数据所在工作站执行，患者数据及结果不随仓库发布。** 合成数据事件率、样本量、效应和P值不能用于论文结果。
 
-## 当前研究入口：五年主分析，其他月份敏感性
+## 历史研究入口：五年主分析，其他月份敏感性
 
 2026-09-17修订后的核心问题：**基线Hcy与五年首次缺血性卒中复发的关联，是否因WMH负担而不同？** 已查看一年结果，这次修订不称为原先预注册的确认性分析。
 

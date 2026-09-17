@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "wmh-hcy"
 version = "0.1.0"
-description = "CNSR-III Hcy and WMH observational analysis; Python only"
+description = "CNSR-III imaging studies and archived Hcy-WMH analysis; Python only"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "numpy>=1.26,<3", "pandas>=2.2,<3", "scipy>=1.13,<2",
@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 wmh-hcy = "wmh_hcy.cli:main"
+wmh-study = "wmh_hcy.studies.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wmh_hcy"]

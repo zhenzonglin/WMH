@@ -1,0 +1,7 @@
+analysis,study,tier,family,status,n,outcome_unknown,parameters,imputations,p,statistic,df1,df2,r,method,m
+primary,bp,primary,cox,ESTIMATED,2310,0,35,2,0.40139734103060787,0.9128034670303425,2,5560006644.978088,1.6425367968579112e-05,D1 pooled multivariate Wald,2
+complete_case,bp,sensitivity,cox,ESTIMATED,2126,0,35,1,0.40450243809553,0.9050975150715205,2,inf,0.0,D1 pooled multivariate Wald,1
+mean_arms,bp,sensitivity,cox,ESTIMATED,2310,0,35,2,0.3409141489121757,1.0761245964027117,2,4054137768.601904,1.9235555462841424e-05,D1 pooled multivariate Wald,2
+severe_wmh,bp,sensitivity,cox,ESTIMATED,1037,0,35,2,0.621435622612737,0.4757229769973808,2,11481276.471664868,0.00036158261974191577,D1 pooled multivariate Wald,2
+month12_landmark,bp,sensitivity,cox,ESTIMATED,2144,0,35,2,0.22016658619501756,1.5133708765141585,2,34019499.14922804,0.00021002591011083402,D1 pooled multivariate Wald,2
+time_varying,bp,sensitivity,cox,ESTIMATED,2310,0,41,2,0.5470810815689277,0.6031582579862942,2,719882804711.0114,1.4434952410122858e-06,D1 pooled multivariate Wald,2

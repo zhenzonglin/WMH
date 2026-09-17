@@ -1,0 +1,13 @@
+albuminuria,state,probability,lower,upper,ci
+0.0,independent,0.6520231565288679,0.6235632697097198,0.679437510778106,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+0.0,dependent,0.2102050670183706,0.18707045422750254,0.23537232407732722,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+0.0,dead,0.13777177645276148,0.1184785641537064,0.15963777460478587,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+1.0,independent,0.6616754666327679,0.6100867947293948,0.7096865418876056,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+1.0,dependent,0.21935950531435663,0.17844377498277608,0.26661234192960387,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+1.0,dead,0.11896502805287548,0.0882708992949671,0.1584771050274728,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+2.0,independent,0.5510572114523472,0.4956992191663015,0.605178549603016,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+2.0,dependent,0.31299846898593897,0.2634834698366601,0.36717963614508975,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+2.0,dead,0.13594431956171388,0.10151222372566061,0.17971939427440423,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+3.0,independent,0.6535647353443077,0.6081284386278242,0.6963632299741266,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+3.0,dependent,0.2304821002872119,0.19319858029405607,0.2725302044997875,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
+3.0,dead,0.11595316436848041,0.08893894675624081,0.14982330042875686,mean probability; Rubin variance; logit-delta pointwise CI; covariate distribution fixed
