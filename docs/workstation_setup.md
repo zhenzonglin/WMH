@@ -173,3 +173,25 @@ uv run wmh-hcy demo --n 700
 更新代码使用`git pull --ff-only`。Conda用户激活`wmh-hcy`后执行`python -m pip install -r requirements-conda.txt`、`python -m pip install --no-deps -e .`和`python -m pip check`；uv用户执行`uv sync --frozen`。本机配置和输出已被Git忽略；不要使用强制添加将其纳入提交。
 
 维护者修改`uv.lock`后，应同时运行`uv export --frozen --no-emit-project --no-hashes --no-annotate --output-file requirements-conda.txt`更新Conda依赖清单。该导出步骤仅用于维护仓库，工作站安装和分析不需要uv。
+
+## 6. 只能截图时：两页诊断摘要
+
+在已完成分析的工作站执行以下命令。摘要脚本只使用Python标准库，无需重新安装项目或重新运行分析。
+
+```bash
+cd /data/usersdir/linzhenzong/WMH
+git pull --ff-only
+python scripts/diagnose_results.py --page 1
+```
+
+第一张截图保留整个摘要，包含H1–H4模型状态、H2/H3病例及事件数量、绝对风险计算状态、bootstrap失败类型和死亡模型结果文件的存在情况。然后执行并截取第二页：
+
+```bash
+python scripts/diagnose_results.py --page 2
+```
+
+第二页包含插补份数及轨迹摘要、Cox模型矩阵及梯度诊断、描述性比例风险检查和mRS模型诊断。每页正常约30行；可将终端最大化后截图。摘要不读取患者CSV、不显示患者ID、不写入或修改结果。
+
+默认读取本项目`outputs/real/latest_results.json`指向的结果。若输出位置自定义，加`--output-dir /实际输出目录`；若需检查指定批次，再加`--results /实际结果批次目录`。两页应使用相同路径参数。缺少诊断文件会显示MISSING，不需要为了生成摘要重新分析。
+
+摘要中prepared病例计数来自当前准备目录，并非本批次模型保存的快照；与模型人数不一致时会提示。插补均值和描述性PH检验仅用于定位问题，不能单独判定插补收敛、MAR或比例优势假设成立。摘要不足以定位时，再根据具体行定向截取一个文件。
