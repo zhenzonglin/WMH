@@ -38,6 +38,8 @@ class StudyDesign:
                 levels = sorted(observed.unique().tolist())
                 if not set(levels).issubset(CATEGORIES[name]):
                     raise DataError(f"Invalid categorical codes: {name}")
+                if name == "albuminuria" and levels != [0, 1, 2, 3]:
+                    raise DataError("Prespecified albuminuria model requires all four observed categories, including reference 0")
                 if len(levels) < 2:
                     raise DataError(f"Constant covariate: {name}; model is not estimable")
                 coding[name] = {"kind": "category", "levels": levels, "reference": levels[0]}
@@ -78,6 +80,8 @@ class StudyDesign:
                 if name in self.spec.splines:
                     columns[name + "_rcs"] = rcs_nonlinear(z.to_numpy(), code["knots"])
         for left, right in self.spec.interactions:
+            if left not in columns or right not in columns:
+                raise DataError(f"Interaction basis unavailable: {left} x {right}; no automatic term deletion")
             columns[left + "_x_" + right] = columns[left] * columns[right]
         # A counting-process sensitivity permits only the prespecified terms to vary.
         if "late_period" in data:

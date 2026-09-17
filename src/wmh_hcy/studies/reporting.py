@@ -22,17 +22,57 @@ def report(folder, state, results):
     primary = folder / "primary"
     figure = None
     figure_label = "SYNTHETIC DEMONSTRATION" if state["mode"] == "synthetic" else "OBSERVATIONAL ANALYSIS"
-    if (primary / "clinical_contrasts.csv").is_file():
-        d = pd.read_csv(primary / "clinical_contrasts.csv")
-        d = d.loc[d.sbp.eq(130) & d.status.eq("ESTIMATED")]
+    if (primary / "continuous_sbp.csv").is_file():
+        d = pd.read_csv(primary / "continuous_sbp.csv")
+        d = d.loc[d.status.eq("ESTIMATED")]
         if len(d):
-            fig, ax = plt.subplots(figsize=(7, 4))
-            ax.errorbar(d.HR, d.wmh_percentile, xerr=[d.HR-d.HR_lower, d.HR_upper-d.HR], fmt="o", capsize=3)
-            ax.axvline(1, color="gray", linestyle="--")
-            ax.set(xlabel="HR: SBP 130 versus 140 mmHg (95% CI)", ylabel="WMH percentile")
-            ax.set_title(figure_label)
+            fig, (ax, hist) = plt.subplots(2, 1, figsize=(8, 6), sharex=True, height_ratios=[3, 1])
+            distribution = pd.read_csv(primary / "sbp_distribution.csv")
+            for percentile, part in d.groupby("wmh_percentile", sort=True):
+                line, = ax.plot(part.sbp, part.HR, label=f"WMH percentile {percentile}")
+                ax.fill_between(part.sbp, part.HR_lower, part.HR_upper, color=line.get_color(), alpha=.15)
+                values = distribution.loc[distribution.wmh_percentile.eq(percentile)]
+                hist.stairs(values.n, [*values.sbp_left, values.sbp_right.iloc[-1]], color=line.get_color())
+            ax.axhline(1, color="gray", linestyle="--")
+            ax.set(yscale="log", ylabel="HR versus SBP 140 mmHg (log scale)", title=figure_label)
+            ax.legend()
+            hist.set(xlabel="Recovery SBP (mmHg), continuous", ylabel="Local N")
+            fig.text(.5, .01, "Pointwise 95% CIs; WMH display neighborhoods; no extrapolation beyond supported SBP", ha="center", fontsize=8)
             figure = "primary_result.png"
-            fig.tight_layout()
+            fig.tight_layout(rect=(0, .03, 1, 1))
+            fig.savefig(folder / figure, dpi=160)
+            plt.close(fig)
+    elif (primary / "kidney_interaction_curves.csv").is_file():
+        d = pd.read_csv(primary / "kidney_interaction_curves.csv")
+        d = d.loc[d.status.eq("ESTIMATED")]
+        if len(d):
+            fig, (ax, diff) = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
+            for name, label in (("both_low", "Both UACR <3 mg/mmol"), ("persistent", "Both UACR >=3 mg/mmol")):
+                line, = ax.plot(d.wmh_ml, 100*d[name+"_probability"], label=label)
+                ax.fill_between(d.wmh_ml, 100*d[name+"_lower"], 100*d[name+"_upper"], color=line.get_color(), alpha=.15)
+            ax.set(ylabel="Five-year dependence probability (%)", title=figure_label)
+            ax.legend()
+            diff.plot(d.wmh_ml, 100*d.difference_estimate)
+            diff.fill_between(d.wmh_ml, 100*d.difference_lower, 100*d.difference_upper, alpha=.15)
+            diff.axhline(0, color="gray", linestyle="--")
+            diff.set(xlabel="Baseline WMH (mL), continuous", ylabel="Persistent minus both-low\n(percentage points)")
+            fig.text(.5, .01, "Pointwise 95% CIs; standardized visit-state probabilities; primary test is on the relative scale", ha="center", fontsize=8)
+            figure = "primary_result.png"
+            fig.tight_layout(rect=(0, .03, 1, 1))
+            fig.savefig(folder / figure, dpi=160)
+            plt.close(fig)
+    elif (folder / "cec_hdl_comparison.csv").is_file():
+        d = pd.read_csv(folder / "cec_hdl_comparison.csv")
+        d = d.loc[d.status.eq("ESTIMATED")].sort_values("analysis", ascending=False)
+        if len(d):
+            fig, ax = plt.subplots(figsize=(8, 3))
+            labels = d.analysis.map({"primary": "M1: with HDL-C (primary)", "without_hdl_same_sample": "M0: without HDL-C"})
+            ax.errorbar(d.estimate, range(len(d)), xerr=[d.estimate-d.lower, d.upper-d.estimate], fmt="o", capsize=4)
+            ax.axvline(0, color="gray", linestyle="--")
+            ax.set(yticks=range(len(d)), yticklabels=labels, xlabel="GM119 difference (mL) per 1 SD CEC; 95% CI", title=figure_label)
+            fig.text(.5, .01, "Same patients, CEC scale and completed covariates; coefficient changes are not mediation estimates", ha="center", fontsize=8)
+            figure = "primary_result.png"
+            fig.tight_layout(rect=(0, .05, 1, 1))
             fig.savefig(folder / figure, dpi=160)
             plt.close(fig)
     elif (primary / "standardized_states.csv").is_file():
@@ -74,7 +114,17 @@ def report(folder, state, results):
                 "<p>多分类系数取指数表示 P(该状态)/P(独立) 的比值之比，不能标为HR。联合检验显著不代表每个系数都显著。</p>"]
     if figure:
         sections.append(f'<img src="{figure}" style="max-width:100%" alt="主要结果图">')
-    for name in ("coefficients", "clinical_contrasts", "standardized_states"):
+    if state["study"] == "bp":
+        sections.append("<p>SBP始终连续建模；主图展示样条关联。140 mmHg仅为参照，固定点对比是补充表。阴影为逐点区间。</p>")
+    if state["study"] == "kidney":
+        sections.append("<p>v2主要检验：依赖方程中持续白蛋白尿×标准化WMH，1自由度。三个类别交互的整体检验为次要。"
+                        "模型含四类UACR、WMH及三个交互，在依赖和死亡方程中均估计。主要比值表示两组WMH斜率的相对概率比之比。"
+                        "绝对概率差是补充展示；两种尺度不要求得到相同交互结论。</p>")
+    if (folder / "cec_hdl_comparison.csv").is_file():
+        sections.extend(["<h2>CEC与HDL-C的配对模型</h2>", table(pd.read_csv(folder / "cec_hdl_comparison.csv")),
+                         ("<p>主要模型调整HDL-C；M0使用同一患者、同一套完成数据与固定CEC尺度。仅删除模型中的HDL-C项。"
+                          "比较系数和区间，不以P值一显著一不显著判断模型差异。</p>")])
+    for name in ("coefficients", "clinical_contrasts", "standardized_states", "kidney_interaction_curves"):
         if (primary / f"{name}.csv").is_file():
             sections.extend([f"<h2>{name}</h2>", table(pd.read_csv(primary / f"{name}.csv"))])
     diag = read_json(primary / "fit_diagnostics.json")
@@ -106,6 +156,8 @@ def summary(cfg, page=1):
     write_html(path / "summary.html", f"<h1>五项独立研究汇总</h1><p>mode={cfg['mode']}；未估计项不当作阴性结果。</p>"
                +table(rows)+"<ul>"+links+"</ul>")
     print(f"CNSR-III STUDIES | mode={cfg['mode']} | page={page}")
+    from . import CONTRACT
+    print(f"Contract={CONTRACT}; PREVIOUS_VERSION results are retained but excluded from current Holm pooling.")
     if page == 1:
         keep = [c for c in ["study", "status", "n", "parameters", "df1", "p", "p_holm_five"] if c in rows]
         print(rows[keep].to_string(index=False))

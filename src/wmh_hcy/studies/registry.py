@@ -116,7 +116,9 @@ def primary_spec(study: str) -> ModelSpec:
         return replace(spec, family="ols", outcome="log_wmh", exposures=("cer_ratio",), primary=("cer_ratio",))
     if study == "cec":
         return replace(spec, family="ols", outcome="gm119_ml", exposures=("cec",), primary=("cec",))
-    return replace(spec, exposures=("wmh_ml", "albuminuria"), primary=("dependent:albuminuria_3",))
+    return replace(spec, exposures=("wmh_ml", "albuminuria"),
+                   interactions=tuple((f"albuminuria_{i}", "wmh_ml") for i in (1, 2, 3)),
+                   primary=("dependent:albuminuria_3_x_wmh_ml",))
 
 
 def roles(study: str) -> list[dict]:
@@ -138,7 +140,7 @@ def roles(study: str) -> list[dict]:
         "prior_bp_med": "卒中前降压使用属于访视血压前的管理背景", "discharge_bp_med": "出院降压使用先于恢复期血压测量",
         "raas": "出院ACEI或ARB先于恢复期UACR并可能影响其测量", "wmh_ml": "背景白质损伤表型",
         "gm119_ml": "背景灰质结构指标，单次测量不代表萎缩速率", "cer_ratio": "文献预先指定C16:0/C24:0比值",
-        "cec": "基线HDL胆固醇外排能力", "albuminuria": "两次实际UACR的四种组合，主要对比持续升高与两次均低",
+        "cec": "基线HDL胆固醇外排能力", "albuminuria": "两次实际UACR的四种组合；主要检验持续升高相对两次均低的关联是否随WMH变化",
     }
     for name in primary_spec(study).predictors:
         role = ("exposure_or_imaging" if name in primary_spec(study).exposures

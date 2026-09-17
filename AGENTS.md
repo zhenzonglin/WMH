@@ -1,5 +1,7 @@
 # WMH analysis project
 
+- Five-study contract v2 uses continuous SBP curves, a paired no-HDL-C CEC sensitivity on the primary completed data, and the kidney dependence-equation persistent-albuminuria by WMH interaction as its single primary test. Keep all three albuminuria interaction terms in both multinomial equations. Summaries must not pool prior-contract results with current primary tests. See `docs/five_studies_revision_v2.md`.
+
 - Current work is the five independent imaging studies under `src/wmh_hcy/studies`, `docs/five_studies_plan.md`, and the `wmh-study` command. Each study has its own clinical whitelist, eligibility, covariate imputation, and result pointers under `outputs/<mode>/studies/`. Hcy is not an eligibility requirement. Follow `docs/five_studies_workstation.md` for audit-first execution. The recurrence and Hcy instructions below describe retained historical workflows; do not overwrite them.
 
 - Current primary workflow is `wmh-hcy recurrence` under `docs/recurrence_v3_plan.md` (2026-09-17, after reviewing year-one results). One Y5_IS/Y5_IS_DD cohort, seven truncation horizons, shared core MI and frozen design; no death regression, absolute risk or bootstrap. Preserve legacy H1-H4/longterm files and pointers. New output root is recurrence_v3. See recurrence_v3_workstation.md for the current startup/audit instructions; older bullets apply to legacy workflows only.

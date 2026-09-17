@@ -1,0 +1,3 @@
+analysis,study,tier,family,status,n,outcome_unknown,parameters,imputations,p,statistic,df1,df2,method,m,primary_terms,estimate,lower,upper,same_primary_imputations
+primary,cec,primary,ols,ESTIMATED,2286,0,27,2,4.8635369315155334e-30,129.65993777695147,1,38469779828.83311,Rubin scalar Wald,2,cec,8.429858360147268,6.978864869269268,9.880851851025268,
+without_hdl_same_sample,cec,sensitivity,ols,ESTIMATED,2286,0,26,2,5.333741520402044e-30,129.47675649939706,1,34560307673.958496,Rubin scalar Wald,2,cec,8.425088280710106,6.9738903663269545,9.87628619509326,True

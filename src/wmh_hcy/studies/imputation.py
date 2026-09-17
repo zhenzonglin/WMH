@@ -21,13 +21,17 @@ def impute(data, design, settings, progress=print):
             raise DataError(f"Entirely unmeasured {col}; cannot impute")
         if (col in spec.exposures or col in IMAGE_COLUMNS) and d[col].isna().any():
             raise DataError(f"Exposure/image missing: {col}; cannot impute")
-    columns = {}
+    columns, bases = {}, {}
     for c in spec.predictors:
         v = d[c]
         if c in CATEGORIES:
             columns[c] = pd.Categorical(v, categories=design.coding[c]["levels"])
+            for level in design.coding[c]["levels"][1:]:
+                bases[f"{c}_{level:g}"] = v.eq(level).astype(float).where(v.notna())
         else:
             columns[c] = raw_transform(v, c)
+            code = design.coding[c]
+            bases[c] = (columns[c]-code["center"])/code["scale"]
     # Observed spline/interaction bases inform FCS. Covariate bases are recomputed
     # from each completed dataset for fitting; this remains approximate FCS.
     for c in spec.splines:
@@ -35,12 +39,14 @@ def impute(data, design, settings, progress=print):
             code = design.coding[c]
             z = (raw_transform(d[c], c)-code["center"])/code["scale"]
             columns["aux_"+c+"_rcs"] = rcs_nonlinear(z.to_numpy(), code["knots"])
-    if spec.interactions:
-        wcode, bcode = design.coding["wmh_ml"], design.coding["sbp3"]
-        w = (np.log1p(d.wmh_ml)-wcode["center"])/wcode["scale"]
-        b = (d.sbp3-bcode["center"])/bcode["scale"]
-        columns["aux_bw"] = b*w
-        columns["aux_brcs_w"] = rcs_nonlinear(b.to_numpy(), bcode["knots"])*w
+            bases[c+"_rcs"] = columns["aux_"+c+"_rcs"]
+    for left, right in spec.interactions:
+        if left not in bases or right not in bases:
+            raise DataError(f"Observed interaction basis unavailable for MI: {left} x {right}")
+        interaction = np.asarray(bases[left])*np.asarray(bases[right])
+        if not np.isfinite(interaction).all():
+            raise DataError("Interaction auxiliaries must be based on observed exposures")
+        columns[f"aux_{left}_x_{right}"] = interaction
     if spec.family == "cox":
         columns.update(aux_event=d.event_type, aux_na=nelson_aalen_increment(d, 1),
                        aux_entry=d.entry, aux_exit=d.exit)

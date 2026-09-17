@@ -1,0 +1,35 @@
+{
+  "contract": "imaging_five_studies_20260917_v2",
+  "mode": "synthetic",
+  "generated_records": 2400,
+  "imputations": 2,
+  "iterations": 2,
+  "studies": [
+    {
+      "study": "01_recovery",
+      "estimated_analyses": 10,
+      "synthetic_run": "20260917T154418471534Z"
+    },
+    {
+      "study": "02_bp",
+      "estimated_analyses": 6,
+      "synthetic_run": "20260917T154429756329Z"
+    },
+    {
+      "study": "04_ceramide",
+      "estimated_analyses": 9,
+      "synthetic_run": "20260917T154449100124Z"
+    },
+    {
+      "study": "05_cec",
+      "estimated_analyses": 9,
+      "synthetic_run": "20260917T154509122083Z"
+    },
+    {
+      "study": "06_kidney",
+      "estimated_analyses": 11,
+      "synthetic_run": "20260917T154527045074Z"
+    }
+  ],
+  "total_estimated": 45
+}

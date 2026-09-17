@@ -219,7 +219,11 @@ def read_results(cfg):
         if pointer:
             folder = Path(pointer["path"])
             result = read_json(folder / "primary/result.json")
-            row.update(result, path=str(folder), run=pointer["run"])
+            version = read_json(folder / "status.json").get("contract")
+            if version == CONTRACT:
+                row.update(result, path=str(folder), run=pointer["run"], contract=version)
+            else:
+                row.update(status="PREVIOUS_VERSION", previous_contract=version, previous_path=str(folder))
         rows.append(row)
     table = pd.DataFrame(rows)
     from statsmodels.stats.multitest import multipletests

@@ -15,9 +15,10 @@ from ..common import DataError, dump_json
 from ..imputation import pool_scalar
 from .data import build_cohort, volume_ok
 from .design import StudyDesign, split_time
+from .effects import bp_distribution, bp_effects, kidney_effects
 from .imputation import impute
 from .models import fit, state_probabilities
-from .pooling import coefficients, contrast, terms_test
+from .pooling import coefficients, terms_test
 from .registry import COMMON, ModelSpec, primary_spec
 
 
@@ -29,7 +30,9 @@ def clinical_probabilities(datasets, design, fits):
             for g in np.quantile(datasets[0].gm119_ml, [.25, .5, .75]):
                 grid.append({"wmh_ml": float(w), "gm119_ml": float(g)})
     elif spec.study == "kidney":
-        grid = [{"albuminuria": float(v)} for v in design.coding["albuminuria"]["levels"]]
+        grid = [{"albuminuria": float(v), "wmh_ml": float(w)}
+                for w in np.quantile(datasets[0].wmh_ml, [.25, .5, .75])
+                for v in design.coding["albuminuria"]["levels"]]
     else:
         name = spec.exposures[0]
         grid = [{name: float(v)} for v in np.quantile(datasets[0][name], [.25, .5, .75])]
@@ -51,25 +54,7 @@ def clinical_probabilities(datasets, design, fits):
 
 
 def bp_contrasts(datasets, design, fits):
-    observed = datasets[0]
-    rows = []
-    # Local support uses the WMH stratum around each display percentile.
-    quantiles = np.quantile(observed.wmh_ml, [.125, .375, .625, .875])
-    for index, percentile in enumerate((25, 50, 75)):
-        w = float(observed.wmh_ml.quantile(percentile/100))
-        local = observed.loc[observed.wmh_ml.between(quantiles[index], quantiles[index+1]), "sbp3"]
-        for sbp in (120, 130, 150):
-            supported = len(local) >= 20 and local.min() <= min(sbp, 140) and local.max() >= max(sbp, 140)
-            row = {"wmh_percentile": percentile, "wmh_ml": w, "sbp": sbp, "reference_sbp": 140,
-                       "local_n": len(local), "support_min": float(local.min()), "support_max": float(local.max())}
-            if not supported:
-                rows.append({**row, "status": "OUTSIDE_OBSERVED_SUPPORT"})
-                continue
-            vectors = [design.contrast(d, {"sbp3": sbp, "wmh_ml": w}, {"sbp3": 140, "wmh_ml": w}) for d in datasets]
-            r = contrast(fits, vectors)
-            rows.append({**row, **r, "HR": np.exp(r["estimate"]), "HR_lower": np.exp(r["lower"]),
-                         "HR_upper": np.exp(r["upper"]), "status": "ESTIMATED"})
-    return pd.DataFrame(rows)
+    return bp_effects(datasets, design, fits)
 
 
 def observation_weights(data, design, outcome):
@@ -93,7 +78,8 @@ def observation_weights(data, design, outcome):
     return raw, diag, (x, indicator, probability)
 
 
-def run_one(data, spec, directory, settings, inherited=None, complete_case=False, ipw=False, time_split=False):
+def run_one(data, spec, directory, settings, inherited=None, complete_case=False, ipw=False, time_split=False,
+            completed=None, capture_completed=None):
     path = directory / spec.name
     path.mkdir(parents=True, exist_ok=True)
     dump_json(path / "model_definition.json", asdict(spec))
@@ -113,7 +99,15 @@ def run_one(data, spec, directory, settings, inherited=None, complete_case=False
         design = StudyDesign.freeze(data, spec, inherited)
         dump_json(path / "frozen_design.json", design.coding)
         result.update(n=len(working), outcome_unknown=int(working[spec.outcome].isna().sum()))
-        datasets, mi = ([working], {"method": "complete_case", "m": 1}) if complete_case else impute(working, design, settings)
+        if completed is not None:
+            datasets, original_mi = completed
+            if any(d.patient_id.tolist() != working.patient_id.tolist() for d in datasets):
+                raise DataError("Paired model must use exactly the primary sample and row order")
+            mi = {**original_mi, "reused_from": "primary", "same_patients_and_completed_covariates": True}
+        else:
+            datasets, mi = ([working], {"method": "complete_case", "m": 1}) if complete_case else impute(working, design, settings)
+        if capture_completed is not None:
+            capture_completed.append((datasets, mi))
         dump_json(path / "imputation.json", mi)
         fits, model_data, weighting = [], [], []
         for index, d in enumerate(datasets):
@@ -138,6 +132,9 @@ def run_one(data, spec, directory, settings, inherited=None, complete_case=False
         test = terms_test(fits, spec.primary)
         result.update(status="ESTIMATED", n=len(model_data[0].patient_id.unique()),
                       parameters=len(fits[0].params), imputations=len(fits), **test)
+        result["primary_terms"] = ";".join(spec.primary)
+        if completed is not None:
+            result["same_primary_imputations"] = True
         if len(spec.primary) == 1:
             row = coefficients(fits, spec.family).set_index("term").loc[spec.primary[0]].to_dict()
             result.update({k: row[k] for k in ("estimate", "lower", "upper", "ratio", "ratio_lower", "ratio_upper") if k in row})
@@ -164,10 +161,14 @@ def run_one(data, spec, directory, settings, inherited=None, complete_case=False
                 period_contrasts.append(curve)
             pd.concat(period_contrasts).to_csv(path / "period_clinical_contrasts.csv", index=False)
         if spec.name == "primary":
-            if spec.family == "multinomial":
+            if spec.family == "multinomial" and spec.study != "kidney":
                 clinical_probabilities(model_data, design, fits).to_csv(path / "standardized_states.csv", index=False)
             if spec.family == "cox":
                 bp_contrasts(model_data, design, fits).to_csv(path / "clinical_contrasts.csv", index=False)
+                bp_effects(model_data, design, fits, continuous=True).to_csv(path / "continuous_sbp.csv", index=False)
+                bp_distribution(model_data[0]).to_csv(path / "sbp_distribution.csv", index=False)
+            if spec.study == "kidney":
+                kidney_effects(model_data, design, fits).to_csv(path / "kidney_interaction_curves.csv", index=False)
         return result, design
     except (DataError, ValueError, np.linalg.LinAlgError, FloatingPointError, KeyError) as exc:
         result.update(reason=str(exc))
@@ -197,7 +198,8 @@ def run_study(data, master, study, directory, settings):
         pd.DataFrame(rows).to_csv(directory / "results.csv", index=False)
         return design
 
-    frozen = run(data, primary)
+    primary_completed = []
+    frozen = run(data, primary, capture_completed=primary_completed if study == "cec" else None)
     # Failure of one model never causes a data-driven change to its specification.
     run(data, primary.variant("complete_case"), inherited=frozen, complete_case=True)
     if study == "recovery":
@@ -233,6 +235,14 @@ def run_study(data, master, study, directory, settings):
         run(valid, functional_spec(primary, "function60_with_wmh", ("wmh_ml",)), inherited=frozen)
         run(valid, functional_spec(primary, "function60_observation_weighted").variant("function60_observation_weighted"), inherited=frozen, ipw=True)
     elif study == "cec":
+        no_hdl = primary.variant("without_hdl_same_sample", covariates=tuple(c for c in primary.covariates if c != "hdl"))
+        if primary_completed:
+            run(data, no_hdl, inherited=frozen, completed=primary_completed[0])
+        else:
+            rows.append({"analysis": no_hdl.name, "study": study, "tier": "sensitivity", "family": "ols",
+                         "status": "NOT_ESTIMABLE", "reason": "Primary completed datasets unavailable; paired comparison not substituted"})
+        compare = pd.DataFrame([r for r in rows if r["analysis"] in {"primary", no_hdl.name}])
+        compare.to_csv(directory / "cec_hdl_comparison.csv", index=False)
         wmh = data.loc[volume_ok(data, "wmh_ml")]
         run(wmh, primary.variant("white_matter", outcome="log_wmh", tier="secondary"), inherited=frozen)
         run(data, primary.variant("apo_ai_adjusted", covariates=primary.covariates+("apo_ai",), tier="secondary"), inherited=frozen)
@@ -242,6 +252,8 @@ def run_study(data, master, study, directory, settings):
         run(valid, functional_spec(primary, "function60_observation_weighted").variant("function60_observation_weighted"), inherited=frozen, ipw=True)
         run(data, primary.variant("cec_spline", splines=("age", "cec"), primary=("cec", "cec_rcs")), inherited=frozen)
     else:
+        run(data, primary.variant("overall_interaction", primary=tuple(
+            f"dependent:albuminuria_{i}_x_wmh_ml" for i in (1, 2, 3)), tier="secondary"), inherited=frozen)
         # Baseline-only structural question: no future UACR, BP or function in C.
         baseline = master.loc[master.age.ge(18) & master.diagnosis.eq(1) & volume_ok(master, "wmh_ml") & volume_ok(master, "icv_ml")].copy()
         baseline_spec = ModelSpec("kidney", name="baseline_structure", family="ols", outcome="log_wmh",
@@ -249,10 +261,15 @@ def run_study(data, master, study, directory, settings):
                                  covariates=COMMON+("bmi", "education", "cysc", "sbp0", "icv_ml"))
         run(baseline, baseline_spec, inherited=frozen)
         run(data, primary.variant("continuous_uacr3", exposures=("wmh_ml", "uacr3_log"),
-                                  covariates=primary.covariates+("uacr0_log",), primary=("dependent:uacr3_log",), tier="secondary"), inherited=frozen)
+                                  covariates=primary.covariates+("uacr0_log",),
+                                  interactions=(("uacr3_log", "wmh_ml"),),
+                                  primary=("dependent:uacr3_log_x_wmh_ml",), tier="secondary"), inherited=frozen)
+        no_interaction = primary.variant("conditional_albuminuria", interactions=(),
+                                         primary=("dependent:albuminuria_3",), tier="secondary")
+        run(data, no_interaction, inherited=frozen)
         # Nested improvement is a pooled Wald test, not a claim of predictive performance.
-        run(data, primary.variant("incremental_albuminuria", primary=tuple(f"dependent:albuminuria_{i}" for i in (1, 2, 3)), tier="secondary"), inherited=frozen)
-        run(data, primary.variant("clinical_wmh_only", exposures=("wmh_ml",), primary=("dependent:wmh_ml",), tier="secondary"), inherited=frozen)
+        run(data, no_interaction.variant("incremental_albuminuria", primary=tuple(f"dependent:albuminuria_{i}" for i in (1, 2, 3)), tier="secondary"), inherited=frozen)
+        run(data, no_interaction.variant("clinical_wmh_only", exposures=("wmh_ml",), primary=("dependent:wmh_ml",), tier="secondary"), inherited=frozen)
         subset = data.loc[volume_ok(data, "lesion_ml")].copy()
         run(subset, primary.variant("clinical_same_subset_core"), inherited=frozen)
         run(subset, primary.variant("clinical_extended", covariates=primary.covariates+("nihss", "toast", "lesion_ml")), inherited=frozen)

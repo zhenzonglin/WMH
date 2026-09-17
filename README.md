@@ -2,6 +2,8 @@
 
 当前新增研究为：早期功能独立后的远期失能、恢复期血压与WMH、神经酰胺与脑损伤表型、CEC与灰质结构、脑肾微血管损伤。五个队列分别建立，不要求Hcy，不以其他研究的检测完整性限制入组。
 
+当前为第二版：血压展示连续样条曲线；CEC并列同样本同插补的HDL-C调整前后模型；脑肾以持续白蛋白尿×WMH为唯一主要交互检验。旧版输出保留，并标记为 `PREVIOUS_VERSION`，不混入新版汇总。详见[修订内容与验证](docs/five_studies_revision_v2.md)及[第二版合成示例](examples/studies_demo_v2/summary.html)。
+
 ```bash
 conda activate wmh-hcy
 git pull --ff-only

@@ -142,13 +142,18 @@ def weighted_multinomial(x, y, terms, weights, diagnostics, observation=None):
     return Fit([f"{s}:{t}" for s in ("dependent", "dead") for t in terms], result.x, cov, diagnostics)
 
 
-def state_probabilities(fitted, x):
-    """Mean standardized probabilities and delta-method variance, all covariance blocks."""
+def state_probability_gradients(fitted, x):
+    """Mean state probabilities and gradients in the full multinomial parameter space."""
     x = np.asarray(x)
     k = x.shape[1]
     p = softmax(np.column_stack([np.zeros(len(x)), x @ fitted.params.reshape(k, 2, order="F")]), axis=1)
     result = []
     for s in range(3):
         gradient = np.concatenate([(x*(p[:, s]*((s == j)-p[:, j]))[:, None]).mean(axis=0) for j in (1, 2)])
-        result.append((float(p[:, s].mean()), float(gradient @ fitted.covariance @ gradient)))
+        result.append((float(p[:, s].mean()), gradient))
     return result
+
+
+def state_probabilities(fitted, x):
+    """Mean standardized probabilities and delta-method variance, all covariance blocks."""
+    return [(q, float(g @ fitted.covariance @ g)) for q, g in state_probability_gradients(fitted, x)]

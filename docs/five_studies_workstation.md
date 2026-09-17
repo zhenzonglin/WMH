@@ -2,6 +2,8 @@
 
 新命令是 `wmh-study`。已有 `wmh-hcy`、一年分析和 `recurrence_v3` 的结果及指针均保留。无需重新整理原始SAS或SuStaIn目录。
 
+当前为第二版 `imaging_five_studies_20260917_v2`：血压以连续SBP曲线为主图；CEC新增同样本同插补的未调整HDL-C模型；脑肾主要检验改为持续白蛋白尿×连续WMH。旧结果仍可从旧运行目录查看，但摘要中标为 `PREVIOUS_VERSION`，不与新版P值合并。代码更新后按下面步骤重新审计和运行，各次结果均保留。
+
 ## 第一步 更新代码和入口
 
 在已有工作站仓库中执行：
@@ -89,6 +91,8 @@ outputs/real/studies/
 ```
 
 每次运行包括 `config_snapshot.json`、`status.json`、`field_audit.csv`、`cohort_flow.csv`、`audit.json`、`results.csv`、`report.html`、`primary_result.png`。每个模型目录包括定义、固定尺度、插补诊断、系数、完整诊断和失败原因。
+
+第二版重点查看：血压的 `primary/continuous_sbp.csv`、`primary/sbp_distribution.csv` 和连续主图，固定点对比保留在 `primary/clinical_contrasts.csv`；CEC的 `cec_hdl_comparison.csv`，两模型必须同人数、同插补；脑肾的 `primary/kidney_interaction_curves.csv`，包含依赖概率、概率差和条件相对概率比。脑肾主要P值现在对应交互，不能与旧版持续白蛋白尿主效应P值直接比较。
 
 `eligible.csv`、`master.csv`、`exclusions.csv` 和 `model_membership.csv` 含患者信息，仅供工作站本地追溯；不要上传GitHub。截图请优先使用上面的摘要命令。`NOT_ESTIMABLE` 是未估计，不能解释为阴性。
 

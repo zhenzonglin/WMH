@@ -27,12 +27,25 @@ def simulate(repetitions=60, n=900, seed=20260917, families=None):
             for rep in range(repetitions):
                 try:
                     d = pd.DataFrame({"patient_id": [str(i) for i in range(n)], "x": rng.normal(size=n), "z": rng.normal(size=n)})
-                    model_family = "ols" if family == "ols_mi" else "cox" if family == "cox_interaction" else family
+                    model_family = ("ols" if family == "ols_mi" else "cox" if family == "cox_interaction"
+                                    else "multinomial" if family == "kidney_interaction" else family)
                     spec = ModelSpec("simulation", family=model_family, outcome="y", exposures=("x",),
                                      covariates=("z",), splines=(), primary=(("dependent:x",) if family == "multinomial" else ("x",)))
                     d.z += .4*d.x
                     if model_family == "ols":
                         d["y"] = target*d.x+.5*d.z+rng.normal(size=n)*(1+.2*np.abs(d.x))
+                    elif family == "kidney_interaction":
+                        d["wmh_ml"] = np.exp(d.x)
+                        d["albuminuria"] = rng.integers(0, 4, n)
+                        spec = ModelSpec("simulation", family="multinomial", outcome="y",
+                                         exposures=("wmh_ml", "albuminuria"), covariates=("z",), splines=(),
+                                         interactions=tuple((f"albuminuria_{i}", "wmh_ml") for i in (1, 2, 3)),
+                                         primary=("dependent:albuminuria_3_x_wmh_ml",))
+                        fixed = StudyDesign.freeze(d, spec)
+                        x = fixed.transform(d)
+                        eta = -.4+.2*x.wmh_ml+.3*x.albuminuria_3+.2*x.z+target*x.albuminuria_3_x_wmh_ml
+                        p = softmax(np.column_stack([np.zeros(n), eta, -.6+.1*x.wmh_ml]), axis=1)
+                        d["y"] = [rng.choice(3, p=v) for v in p]
                     elif family == "multinomial":
                         p = softmax(np.column_stack([np.zeros(n), -.5+target*d.x+.4*d.z, -.7+.2*d.z]), axis=1)
                         d["y"] = [rng.choice(3, p=v) for v in p]
@@ -54,7 +67,7 @@ def simulate(repetitions=60, n=900, seed=20260917, families=None):
                         d = d.loc[d.exit.gt(d.entry)].reset_index(drop=True)
                     if family == "ols_mi":
                         d.loc[rng.random(len(d)) < expit(-1.6+.5*d.x), "z"] = np.nan
-                    design = fixed if family == "cox_interaction" else StudyDesign.freeze(d, spec)
+                    design = fixed if family in {"cox_interaction", "kidney_interaction"} else StudyDesign.freeze(d, spec)
                     completed = impute(d, design, {"imputations": 5, "mice_iterations": 3,
                                                    "mice_threads": 2, "seed": seed+rep}, progress=lambda _: None)[0] if family == "ols_mi" else [d]
                     fits = [fit(a, design) for a in completed]
@@ -82,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--repetitions", type=int, default=60)
     parser.add_argument("--n", type=int, default=900)
     parser.add_argument("--output", default="outputs/synthetic/studies_validation")
-    parser.add_argument("--family", choices=["ols", "multinomial", "cox", "ols_mi", "cox_interaction"], action="append")
+    parser.add_argument("--family", choices=["ols", "multinomial", "cox", "ols_mi", "cox_interaction", "kidney_interaction"], action="append")
     args = parser.parse_args()
     folder = Path(args.output)
     folder.mkdir(parents=True, exist_ok=True)
