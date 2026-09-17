@@ -52,7 +52,7 @@ def build_cohort(data: pd.DataFrame):
     conflict = consistency_issues(check, 5)
     rules = [
         ("adult_ischemic_stroke", d.age.ge(18) & d.diagnosis.eq(1)),
-        ("available_wmh_icv", d.image_valid.fillna(False).astype(bool)),
+        ("available_wmh_icv", d.image_valid.astype("boolean").fillna(False)),
         ("observed_positive_baseline_hcy", np.isfinite(d.hcy) & d.hcy.gt(0)),
         ("valid_baseline_sample_day", np.isfinite(d.entry) & d.entry.ge(0) & d.entry.lt(1825)),
         ("known_five_year_event_status", event.isin([0, 1])),

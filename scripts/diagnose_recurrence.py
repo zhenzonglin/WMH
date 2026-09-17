@@ -1,4 +1,4 @@
-"""One-screen, read-only aggregate summary; never reads patient-level rows."""
+"""Read-only summary. --timing reads local dates/times but prints only aggregates."""
 import argparse
 from pathlib import Path
 
@@ -10,12 +10,17 @@ from wmh_hcy.workstation import load_workstation
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--config")
 parser.add_argument("--results", type=Path)
+parser.add_argument("--timing", action="store_true", help="Audit saved entry dates/times without IDs or refitting")
 args = parser.parse_args()
 cfg = load_workstation(args.config, "recurrence")
 pointer = read_json(Path(cfg["_out"]) / "recurrence_v3/latest_run.json")
 root = args.results or (Path(pointer["path"]) if pointer else None)
 if root is None:
     parser.error("No recurrence v3 run found. Run wmh-hcy recurrence --through prepare first.")
+if args.timing:
+    from wmh_hcy.recurrence_diagnostics import timing_summary
+    print("\n".join(timing_summary(root)))
+    raise SystemExit(0)
 state = read_json(root / "status.json")
 print(f"RECURRENCE V3 | mode={state.get('mode')} | status={state.get('status')} | run={root.name}")
 print("READ ONLY: aggregate files only; no patient IDs, no fitting.")

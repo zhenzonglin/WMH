@@ -64,6 +64,16 @@ outputs/real/recurrence_v3/
 
 截图脚本只读本轮聚合输出，不打印患者ID，不重新插补或拟合。`--config`可指定非默认配置；`--results`可指定某次运行目录。仅有截图时，先发这一屏即可。
 
+若发现`entry_at_or_after_cutoff`提示基线采血很晚，可对**现有准备结果**运行：
+
+```bash
+python scripts/diagnose_recurrence.py --timing
+```
+
+该选项只读取本地已准备队列的日期/时间列，输出采血间隔分布、日期相减与入组时间是否一致、日期字段来源/格式等汇总；不打印ID或个体日期，不写文件，不重跑准备或统计。晚采血标记不自动改变队列。日期相减一致也不能证明源日期无误。
+
+`censored_before_cutoff`表示未复发而在截止之前结束观察的人数，不能统一解释为失访；可能包括死亡或观察长度不足，需按原始随访定义解读。
+
 现有`run`、`longterm`和`check-fit`继续对应旧方案。新版请明确使用`recurrence`。不要把旧版5857例和444事件写作本轮五年结果。
 
 方法与解释：[统计分析计划](recurrence_v3_plan.md)。
