@@ -101,6 +101,12 @@ def page_one(root: Path, output: Path, status: dict) -> list[str]:
         row = analyses.get(MODELS[label], {})
         diag = read_json(folder / "risk_diagnostics.json")
         lines.append(f"{label} risk error: {reason_group(row.get('absolute_risk_reason'))}")
+        failure = read_json(folder / "risk_failure.json")
+        if isinstance(failure, dict) and "_unavailable" not in failure:
+            stage = failure.get("stage")
+            known = {"death_fit", "death_pooling", "risk_bootstrap", "month3_M0_M1_risk_update"}
+            lines.append(f"  failure stage={stage if stage in known else 'other'}; "
+                         f"imputation={span([failure.get('imputation')])}")
         if not isinstance(diag, dict) or "_unavailable" in diag:
             lines.append(
                 f"  risk_diagnostics.json: {diag.get('_unavailable', 'INVALID') if isinstance(diag, dict) else 'INVALID'}"
@@ -121,6 +127,11 @@ def page_one(root: Path, output: Path, status: dict) -> list[str]:
                 "  failures by imputation (index starts at 0): "
                 + (", ".join(f"{k}:{v}" for k, v in by_m.most_common(5)) or "none")
             )
+            stages = Counter(r.get("stage") if r.get("stage") in
+                             {"ischemic_fit", "death_fit", "risk_prediction"} else "unrecorded"
+                             for r in failures)
+            if failures:
+                lines.append("  failure stages: " + ", ".join(f"{k}:{v}" for k, v in stages.items()))
         lines.append(
             "  death_coefficients.csv: "
             + ("PRESENT" if (folder / "death_coefficients.csv").is_file() else "ABSENT")

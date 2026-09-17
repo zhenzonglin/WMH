@@ -60,9 +60,20 @@ def run_survival(data, cfg, folder, label, spec=None, kind="main", risk=False, c
               "parameters": len(spec.columns), "imputations": len(completed), "estimand": primary["estimand"],
               "primary_p": primary["p"], "estimate": primary["estimate"]}
     if risk:
+        risk_stage = "death_fit"
+        risk_imputation = None
+        death_diagnostics = []
         try:
-            pairs = [(s, fit_cause(d, spec, 2)) for d, s in zip(completed, fits, strict=True)]
+            pairs = []
+            for risk_imputation, (d, s) in enumerate(zip(completed, fits, strict=True)):
+                death = fit_cause(d, spec, 2)
+                pairs.append((s, death))
+                death_diagnostics.append({"imputation": risk_imputation, **death.diagnostics})
+            dump_json(folder / "death_diagnostics.json", death_diagnostics)
+            risk_stage = "death_pooling"
+            risk_imputation = None
             pool_coefficients([v[1] for v in pairs], label + "_death").to_csv(folder / "death_coefficients.csv", index=False)
+            risk_stage = "risk_bootstrap"
             curves, intervals, differences, diag = risk_analysis(completed, spec, pairs, cfg)
             curves.to_csv(folder / "risk_curves.csv", index=False)
             intervals.to_csv(folder / "risk_intervals.csv", index=False)
@@ -70,6 +81,7 @@ def run_survival(data, cfg, folder, label, spec=None, kind="main", risk=False, c
             dump_json(folder / "risk_diagnostics.json", diag)
             status["absolute_risk_status"] = diag["status"]
             if kind == "month3":
+                risk_stage = "month3_M0_M1_risk_update"
                 horizon = cfg["analysis"]["horizon"]
                 m1 = [cumulative_incidence(d, spec, *pair, horizon) for d, pair in zip(completed, pairs, strict=True)]
                 m0 = [cumulative_incidence(d, base, s, fit_cause(d, base, 2), horizon)
@@ -80,6 +92,9 @@ def run_survival(data, cfg, folder, label, spec=None, kind="main", risk=False, c
                 update.to_csv(folder / "risk_update_M0_M1.csv", index=False)
         except (DataError, ValueError, np.linalg.LinAlgError) as exc:
             status.update(absolute_risk_status="NOT_ESTIMABLE", absolute_risk_reason=str(exc))
+            dump_json(folder / "death_diagnostics.json", death_diagnostics)
+            dump_json(folder / "risk_failure.json", {"stage": risk_stage, "imputation": risk_imputation,
+                      "reason": str(exc), "completed_death_fits": len(death_diagnostics)})
     return status
 
 

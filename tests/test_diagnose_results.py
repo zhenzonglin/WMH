@@ -238,3 +238,14 @@ def test_page_three_rejects_longterm(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         REPORTER.main()
     assert exc.value.code == 2
+
+
+def test_risk_failure_stage_is_visible_without_raw_error(tmp_path):
+    write_json(tmp_path / "03_month3_update/risk_failure.json",
+               {"stage": "death_fit", "imputation": 2, "reason": "PRIVATE_DETAIL"})
+    write_json(tmp_path / "02_recurrence/risk_diagnostics.json",
+               {"failures": [{"stage": "death_fit"}, {"stage": "PRIVATE_DETAIL"}]})
+    text = "\n".join(REPORTER.page_one(tmp_path, tmp_path, {}))
+    assert "failure stage=death_fit; imputation=2" in text
+    assert "failure stages: death_fit:1, unrecorded:1" in text
+    assert "PRIVATE_DETAIL" not in text

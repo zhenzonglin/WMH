@@ -92,13 +92,16 @@ def risk_analysis(completed: list[pd.DataFrame], spec: Design, fits: list[tuple[
         samples = []
         for rep in range(b):
             sample = d.iloc[rng.integers(0, len(d), len(d))].reset_index(drop=True)
+            stage = "ischemic_fit"
             try:
                 sf = fit_cause(sample, spec, 1)
+                stage = "death_fit"
                 df = fit_cause(sample, spec, 2)
+                stage = "risk_prediction"
                 samples.append(standardized_risks(sample, spec, sf, df, landmarks,
                                                    cfg["analysis"]["horizon"]))
             except (DataError, ValueError, np.linalg.LinAlgError) as exc:
-                failures.append({"imputation": m, "replicate": rep, "reason": str(exc)})
+                failures.append({"imputation": m, "replicate": rep, "stage": stage, "reason": str(exc)})
         if len(samples) < max(2, int(np.ceil(0.9*b))):
             return curve, pd.DataFrame(), pd.DataFrame(), {
                 "status": "BOOTSTRAP_UNSTABLE", "failures": failures, "valid": len(samples), "requested": b}

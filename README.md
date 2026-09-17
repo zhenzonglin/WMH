@@ -2,7 +2,7 @@
 
 这是基于既有WMH分割产物和已提供临床字段的纯Python分析项目。支持Ubuntu或WSL工作站，不依赖R，也不使用中心变量。
 
-**当前交付包含代码、方法学材料和合成数据验证。尚未读取或分析患者数据。** 合成数据事件率、样本量、效应和P值不能用于论文结果。
+**仓库包含代码、方法学材料和合成数据验证。真实患者分析在数据所在工作站执行，患者数据及结果不随仓库发布。** 合成数据事件率、样本量、效应和P值不能用于论文结果。
 
 ## 在另一台工作站开始
 
@@ -113,6 +113,8 @@ uv run wmh-hcy report
 ```
 
 单独运行一个假设：`uv run wmh-hcy analyse --hypothesis H3`。完整运行按H1–H4依次执行；单项运行仍保持固定多重比较家族。`hypothesis_summary.csv`是四条假设的统一结果表。
+
+死亡模型或绝对风险计算失败时，可先运行`wmh-hcy check-fit --hypothesis H3`（也支持H2）。它使用现有prepared队列和配置中的插补份数，独立检查两类Cox模型，不做bootstrap、不覆盖正式结果；摘要保存在`outputs/real/diagnostics/`。备用求解保持模型公式与非惩罚估计目标，不能替代模型假设检查。详见[工作站操作手册](docs/workstation_setup.md)。
 
 分析命令接受`--config config/其他.local.yml`。`audit`发现数据问题时返回退出码2，并保存报告。一个临床变量在多份SAS中出现时，用`variable_sources`指定一个来源文件名；同名文件用绝对路径区分。主终点始终只使用`y1_is`和`y1_is_dd`。
 
