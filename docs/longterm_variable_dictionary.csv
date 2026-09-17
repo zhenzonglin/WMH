@@ -1,0 +1,29 @@
+﻿source,analysis_name,unit_or_type,allowed_codes,source_evidence,usage
+y2_IS,y2_is_event,category,"[0, 1]",user supplied screenshots 2026-09-17,primary longterm endpoint
+y2_IS_dd,y2_is_day,days,null,user supplied screenshots 2026-09-17,primary longterm endpoint
+y2_STROKE,y2_stroke_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y2_STROKE_dd,y2_stroke_day,days,null,user supplied screenshots 2026-09-17,extraction only
+y2_HS,y2_hs_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y2_HS_dd,y2_hs_day,days,null,user supplied screenshots 2026-09-17,extraction only
+m24_mrs,mrs24,score,"[0, 1, 2, 3, 4, 5, 6]",user supplied screenshots 2026-09-17,functional endpoint
+y3_IS,y3_is_event,category,"[0, 1]",user supplied screenshots 2026-09-17,primary longterm endpoint
+y3_IS_dd,y3_is_day,days,null,user supplied screenshots 2026-09-17,primary longterm endpoint
+y3_STROKE,y3_stroke_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y3_STROKE_dd,y3_stroke_day,days,null,user supplied screenshots 2026-09-17,extraction only
+y3_HS,y3_hs_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y3_HS_dd,y3_hs_day,days,null,user supplied screenshots 2026-09-17,extraction only
+m36_mrs,mrs36,score,"[0, 1, 2, 3, 4, 5, 6]",user supplied screenshots 2026-09-17,functional endpoint
+y4_IS,y4_is_event,category,"[0, 1]",user supplied screenshots 2026-09-17,primary longterm endpoint
+y4_IS_dd,y4_is_day,days,null,user supplied screenshots 2026-09-17,primary longterm endpoint
+y4_STROKE,y4_stroke_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y4_STROKE_dd,y4_stroke_day,days,null,user supplied screenshots 2026-09-17,extraction only
+y4_HS,y4_hs_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+y4_HS_dd,y4_hs_day,days,null,user supplied screenshots 2026-09-17,extraction only
+m48_mrs,mrs48,score,"[0, 1, 2, 3, 4, 5, 6]",user supplied screenshots 2026-09-17,functional endpoint
+Y5_IS,y5_is_event,category,"[0, 1]",user supplied screenshots 2026-09-17,primary longterm endpoint
+Y5_IS_DD,y5_is_day,days,null,user supplied screenshots 2026-09-17,primary longterm endpoint
+Y5_STROKE,y5_stroke_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+Y5_STROKE_DD,y5_stroke_day,days,null,user supplied screenshots 2026-09-17,extraction only
+Y5_HS,y5_hs_event,category,"[0, 1]",user supplied screenshots 2026-09-17,extraction only
+Y5_HS_DD,y5_hs_day,days,null,user supplied screenshots 2026-09-17,extraction only
+m60_mrs,mrs60,score,"[0, 1, 2, 3, 4, 5, 6]",user supplied screenshots 2026-09-17,functional endpoint

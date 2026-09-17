@@ -104,11 +104,11 @@ def cross_sectional(data: pd.DataFrame, spec: Design) -> pd.DataFrame:
     return table
 
 
-def ordinal(data: pd.DataFrame, spec: Design) -> tuple[pd.DataFrame, dict, pd.DataFrame]:
+def ordinal(data: pd.DataFrame, spec: Design, outcome: str = "mrs12") -> tuple[pd.DataFrame, dict, pd.DataFrame]:
     x = spec.transform(data)
     with warnings.catch_warnings(record=True) as captured:
         warnings.simplefilter("always")
-        fit = OrderedModel(data.mrs12.astype(int), x, distr="logit").fit(method="bfgs", maxiter=500, disp=False)
+        fit = OrderedModel(data[outcome].astype(int), x, distr="logit").fit(method="bfgs", maxiter=500, disp=False)
     if not fit.mle_retvals.get("converged", False):
         raise DataError("Ordinal logistic model did not converge")
     ncoef = x.shape[1]
@@ -117,7 +117,7 @@ def ordinal(data: pd.DataFrame, spec: Design) -> tuple[pd.DataFrame, dict, pd.Da
     table = pd.DataFrame({"term": list(x), "estimate": estimates, "variance": np.diag(covariance)})
     thresholds = []
     for cut in range(6):
-        y = data.mrs12.gt(cut).astype(int)
+        y = data[outcome].gt(cut).astype(int)
         if y.nunique() < 2:
             continue
         try:
@@ -127,7 +127,8 @@ def ordinal(data: pd.DataFrame, spec: Design) -> tuple[pd.DataFrame, dict, pd.Da
                                    "estimate": float(binary.params[term]), "se": float(binary.bse[term])})
         except (ValueError, np.linalg.LinAlgError) as exc:
             thresholds.append({"threshold": cut, "failure": str(exc)})
-    diag = {"n": len(data), "converged": True, "mrs_distribution": data.mrs12.value_counts().to_dict(),
+    diag = {"n": len(data), "converged": True, "outcome": outcome,
+            "mrs_distribution": data[outcome].value_counts().to_dict(),
             "warnings": [str(w.message) for w in captured],
             "proportional_odds_check": "Inspect threshold-specific coefficients; no automated claim of PO validity"}
     return table, diag, pd.DataFrame(thresholds)

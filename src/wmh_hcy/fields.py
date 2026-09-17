@@ -40,6 +40,19 @@ for _v in [3, 6, 12]:
         f"F{_v}_DEATH_D": (f"death{_v}_date", "date", None),
     })
 
+# User-supplied cumulative endpoints, including observation time for non-events.
+# Optional for the original one-year analysis; SAS matching is case-insensitive.
+LONGTERM_YEARS = (2, 3, 4, 5)
+LONGTERM_FIELDS = {}
+for _year in LONGTERM_YEARS:
+    for _endpoint in ("IS", "STROKE", "HS"):
+        _source = f"Y{_year}_{_endpoint}" if _year == 5 else f"y{_year}_{_endpoint}"
+        _time = _source + ("_DD" if _year == 5 else "_dd")
+        LONGTERM_FIELDS[_source] = (f"y{_year}_{_endpoint.lower()}_event", "category", [0, 1])
+        LONGTERM_FIELDS[_time] = (f"y{_year}_{_endpoint.lower()}_day", "days", None)
+    LONGTERM_FIELDS[f"m{12*_year}_mrs"] = (f"mrs{12*_year}", "score", None)
+FIELDS.update(LONGTERM_FIELDS)
+
 CORE_CATEGORIES = ["sex", "smoking", "drinking", "hypertension", "diabetes", "prior_stroke"]
 CORE_CONTINUOUS = ["age", "b12", "folate", "cysc", "icv_ml", "sample_day"]
 CORE = CORE_CATEGORIES + CORE_CONTINUOUS

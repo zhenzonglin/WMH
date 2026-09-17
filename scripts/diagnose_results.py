@@ -73,7 +73,7 @@ def page_one(root: Path, output: Path, status: dict) -> list[str]:
     for label, folder in MODELS.items():
         row = analyses.get(folder, {})
         lines.append(
-            f"{label:<7} {str(row.get('n', 'NA')):<7} {str(row.get('ischemic_events', 'NA')):<18} "
+            f"{label:<7} {row.get('n', 'NA')!s:<7} {row.get('ischemic_events', 'NA')!s:<18} "
             f"{row.get('status', 'MISSING')} / {row.get('absolute_risk_status', 'not requested')}"
         )
     cohort = read_json(output / "prepared/cohort_summary.json")
@@ -211,7 +211,10 @@ def main() -> int:
         "--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "outputs/real"
     )
     parser.add_argument("--results", type=Path, help="Optional exact result batch directory")
+    parser.add_argument("--longterm", action="store_true", help="Summarize the separate 2-5 year extension")
     args = parser.parse_args()
+    if args.longterm:
+        args.output_dir = args.output_dir / "longterm"
     root = args.results
     if root is None:
         latest = read_json(args.output_dir / "latest_results.json")
@@ -227,6 +230,37 @@ def main() -> int:
         return 2
     print(f"WMH DIAGNOSTICS | run={root.name} | mode={status.get('mode', 'NA')}")
     print("READ ONLY: aggregate files; no patient rows; no analysis is rerun.")
+    if args.longterm:
+        print("SUPPLEMENTARY 2-5 YEAR ANALYSES | " + str(status.get("status", "NA")))
+        if args.page == 1:
+            print("Year / model      n     IS events   status")
+            for name, row in status.get("analyses", {}).items():
+                print(
+                    f"{name:<16} {row.get('n', 'NA')!s:<6} {row.get('events', 'NA')!s:<11} {row.get('status', 'NA')}"
+                )
+            for row in status.get("field_audit", []):
+                print(
+                    f"Y{row['year']}: IS_dd present for non-events={row['non_event_with_time']}; "
+                    f"cross-year conflicts={row['cross_year_conflicts']}; missing={row.get('missing_fields') or 'none'}"
+                )
+        else:
+            print("Year / model      ratio [pointwise 95% CI]       P / Holm P (4 years)")
+            path = root / "longterm_summary.csv"
+            if path.is_file():
+                with path.open(encoding="utf-8-sig", newline="") as handle:
+                    for row in csv.DictReader(handle):
+                        print(
+                            f"Y{row['year']} {row['family']:<7} "
+                            f"{span([row['ratio']])} [{span([row['ratio_lower']])}, {span([row['ratio_upper']])}] "
+                            f"P={span([row['p']])} / {span([row['p_holm_4']])}"
+                        )
+            else:
+                print("longterm_summary.csv: MISSING")
+            for name, row in status.get("analyses", {}).items():
+                if row.get("status") == "NOT_ESTIMABLE":
+                    print(f"{name} failure: {reason_group(row.get('reason'))}")
+        print("No long-term competing-death absolute risk is calculated.")
+        return 0
     for line in page_one(root, args.output_dir, status) if args.page == 1 else page_two(root):
         print(line)
     return 0

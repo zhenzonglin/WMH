@@ -47,6 +47,8 @@ def inspect_values(series: pd.Series, source: str, fmt: str, overrides: dict) ->
         good &= numeric.gt(0)
     if name in {"pre_mrs", "mrs12", "nihss"}:
         good &= numeric.between(0, 42 if name == "nihss" else 5) & numeric.mod(1).eq(0)
+    if name in {"mrs24", "mrs36", "mrs48", "mrs60"}:
+        good &= numeric.between(0, 6) & numeric.mod(1).eq(0)
     return good.fillna(False), (~missing & ~good).fillna(False)
 
 

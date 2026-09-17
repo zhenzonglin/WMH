@@ -29,13 +29,14 @@ def load_cohort(cfg: dict, name: str) -> pd.DataFrame:
     return pd.read_csv(path, dtype={"patient_id": str, "participant_id": str})
 
 
-def run_survival(data, cfg, folder, label, spec=None, kind="main", risk=False, complete_case=False):
+def run_survival(data, cfg, folder, label, spec=None, kind="main", risk=False, complete_case=False,
+                 death_auxiliaries=True):
     if data.empty:
         raise DataError("Empty analysis cohort")
     folder.mkdir(parents=True, exist_ok=True)
     data[["patient_id", "entry", "exit", "event_type"]].to_csv(folder / "analysis_participants.csv", index=False)
     completed, mi = ([data.reset_index(drop=True)], {"method": "complete_case", "m": 1}) if complete_case \
-        else impute(data, cfg, kind)
+        else impute(data, cfg, kind, death_auxiliaries=death_auxiliaries)
     dump_json(folder / "imputation.json", mi)
     spec = (spec or Design()).fit(completed[0], cfg["analysis"]["spline_quantiles"])
     dump_json(folder / "design.json", spec.to_dict())
@@ -101,16 +102,17 @@ def run_structural(data, cfg, folder):
             "primary_p": primary["p"], "estimate": primary["estimate"]}
 
 
-def run_functional(data, cfg, folder, kind="functional"):
+def run_functional(data, cfg, folder, kind="functional", outcome="mrs12", survival_auxiliaries=True):
     data = data.loc[available_volume(data.lesion_ml, allow_zero=True)].copy()
     if data.empty:
         raise DataError("No patients with observed function and eligible acute lesion imaging")
     folder.mkdir(parents=True, exist_ok=True)
-    frames, mi = impute(data, cfg, kind)
+    frames, mi = impute(data, cfg, kind, functional_outcome=outcome,
+                        survival_auxiliaries=survival_auxiliaries)
     spec = Design(expanded=True, functional=True, t1=kind == "functional_t1").fit(
         frames[0], cfg["analysis"]["spline_quantiles"])
-    results = [ordinal(d, spec) for d in frames]
-    data[["patient_id", "mrs12"]].to_csv(folder / "analysis_participants.csv", index=False)
+    results = [ordinal(d, spec, outcome=outcome) for d in frames]
+    data[["patient_id", outcome]].to_csv(folder / "analysis_participants.csv", index=False)
     table = pool_regression([r[0] for r in results], kind, exponentiate=True)
     table.to_csv(folder / "coefficients.csv", index=False)
     primary = table.set_index("term").loc["H_x_W"].to_dict()

@@ -245,7 +245,7 @@ def test_full_clinical_audit_and_prepare_without_mri_interval(setup):
     assert "IMG_ONSET_TO_MRI_D" not in clinical
     result = clinical_audit(cfg)
     assert result["status"] == "READY_FOR_EXTRACTION"
-    assert result["whitelist_fields_expected"] == 38
+    assert result["whitelist_fields_expected"] == 66  # 38 original + 28 optional long-term fields.
     assert result["required_missing"] == []
     assert result["profiles"][0]["n_observed_all_listed_values"] == 100
     assert result["profiles"][1]["n_observed_all_listed_values"] == 100
@@ -305,7 +305,8 @@ def test_four_sas_sources_extract_and_prepare_with_38_fields(setup, monkeypatch)
     census = result["stages"]["audit"]
     assert result["status"] == "COMPLETED"
     assert census["sas_or_csv_files"] == 4
-    assert census["whitelist_fields_present"] == census["whitelist_fields_expected"] == 38
+    assert census["whitelist_fields_present"] == 38
+    assert census["whitelist_fields_expected"] == 66
     assert census["patients_in_selected_source_union"] == 100
     extracted = pd.read_csv(root / "outputs/real/extracted/clinical_raw.csv", dtype=str)
     assert len(extracted) == 100 and len(extracted.columns) == 38

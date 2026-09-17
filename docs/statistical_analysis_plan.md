@@ -192,3 +192,7 @@ H2为唯一主要假设。H1、H3、H4作为固定三项次要家族进行Holm�
 **[MICE]**  miceforest: multiple imputation with LightGBM. Official documentation. 2026. [https://github.com/AnotherSamWilson/miceforest](https://github.com/AnotherSamWilson/miceforest)
 
 **[PYREAD]**  pyreadstat: SAS files, metadata and special missing values. Official documentation. 2026. [https://github.com/Roche/pyreadstat](https://github.com/Roche/pyreadstat)
+
+## 2026-09-17：长期随访补充方案
+
+研究者新增2—5年缺血性卒中状态、事件/删失时间及24—60月mRS。该扩展在一年结果已知后制定，保持原主检验及一年结果，详见[长期统计与实施方案](longterm_analysis_plan.md)。各年份分别拟合H2、H3、H4及T1补充模型，固定四年Holm检验家族；不增加未提供的死亡日期或竞争风险绝对发生率。

@@ -195,3 +195,45 @@ python scripts/diagnose_results.py --page 2
 默认读取本项目`outputs/real/latest_results.json`指向的结果。若输出位置自定义，加`--output-dir /实际输出目录`；若需检查指定批次，再加`--results /实际结果批次目录`。两页应使用相同路径参数。缺少诊断文件会显示MISSING，不需要为了生成摘要重新分析。
 
 摘要中prepared病例计数来自当前准备目录，并非本批次模型保存的快照；与模型人数不一致时会提示。插补均值和描述性PH检验仅用于定位问题，不能单独判定插补收敛、MAR或比例优势假设成立。摘要不足以定位时，再根据具体行定向截取一个文件。
+
+## 7. 新增2、3、4、5年分析
+
+将包含新字段的SAS文件放在已经配置的SAS目录（允许子目录）后更新项目，沿用当前Conda环境：
+
+```bash
+cd /data/usersdir/linzhenzong/WMH
+git pull --ff-only
+python -m pip install --no-deps -e .
+wmh-hcy longterm --through prepare
+```
+
+此命令自动从多份SAS中重新提取字段，连接原WMH影像，并建立各年H2/H3/H4队列。不会运行统计模型，也不覆盖一年结果。若SAS路径已经改变，先使用`wmh-hcy configure --sas-dir "/实际SAS目录"`。新SAS同样必须有`code_n`；若仅有另一种脱敏编号，需要已确认的精确连接键，不能按行号拼接。
+
+检查准备摘要后执行四年全部模型及报告：
+
+```bash
+wmh-hcy longterm --through report
+```
+
+该命令重新提取并准备本批次，随后按年份执行H2基线Hcy×WMH复发模型、H3三个月Hcy更新、H4对应年份mRS及T1补充模型。它不重跑H1或一年模型。若需分开运行，可用`--years 2 3`或`--hypothesis H2`；未运行年份不会缩小Holm四次检验家族。
+
+结果位于`outputs/real/longterm/results/<UTC时间>/report.html`，新指针为`outputs/real/longterm/latest_results.json`。每次运行保留独立批次，原`outputs/real/latest_results.json`保持不变。每年目录含病例流程、模型系数、插补和诊断；汇总为`longterm_summary.csv`及`figures/longterm_forest.png`。失败模型会标记NOT_ESTIMABLE并保留原因，其余模型继续执行。
+
+只能截图时，按页执行：
+
+```bash
+python scripts/diagnose_results.py --longterm --page 1
+python scripts/diagnose_results.py --longterm --page 2
+```
+
+第一页面向病例和事件数量，第二页面向四年估计与Holm校正。缺失或失败状态也请保留在截图中。
+
+白名单增加28个可选字段，总数66；旧的一年数据只有38项仍可运行。长期分析仅使用各年IS/IS_DD与mRS，STROKE/HS目前只提取。`_dd`是事件或删失时间，不能将0状态均视作随访完成。当前没有完整的长期死亡日期，因此不生成2—5年竞争风险绝对发生率。详细规则及统计层级见[长期分析方案](longterm_analysis_plan.md)。
+
+软件演示（只生成合成数据，不读取真实配置中的患者文件）：
+
+```bash
+python examples/run_longterm_demo.py --n 600
+```
+
+合成结果单独保存在`outputs/demo_longterm/longterm/`，采用2份插补，不能用于研究推断。

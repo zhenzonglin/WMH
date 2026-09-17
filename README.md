@@ -67,6 +67,17 @@ uv run wmh-hcy run --through report
 
 H2使用双侧α=0.05；H1、H3、H4使用固定三项Holm。B12作为调整因素；协变量按`adjustment.py`的角色规则选择，详见`docs/covariate_rationale.csv`。
 
+### 2—5年补充分析
+
+新增`y2_IS`至`Y5_IS`及对应`_dd`、`m24_mrs`至`m60_mrs`接口。在原Conda环境更新项目后运行：
+
+```bash
+wmh-hcy longterm --through prepare
+wmh-hcy longterm --through report
+```
+
+各年份分别执行H2复发、H3三个月Hcy更新、H4有序mRS及T1补充；结果单独写入`outputs/real/longterm/`，原一年结果保留。长期Cox使用实际事件/删失天数，没有完整长期死亡日期时不计算竞争风险绝对发生概率。四年结果按补充探索性分析报告，每项假设固定四年Holm校正。[统计规则](docs/longterm_analysis_plan.md)及[操作说明](docs/workstation_setup.md)包含字段和截图命令。
+
 不接入患者数据也可以运行演示：
 
 ```bash

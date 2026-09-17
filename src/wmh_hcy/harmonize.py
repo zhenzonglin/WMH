@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .common import DataError, dump_json, outdir, read_csv, read_json, resolve, unique_ids
-from .fields import FIELDS, UNKNOWN_98
+from .fields import FIELDS, LONGTERM_FIELDS, UNKNOWN_98
 
 
 def sas_date(series: pd.Series, fmt: str, override: str | None = None) -> pd.Series:
@@ -36,12 +36,14 @@ def sas_date(series: pd.Series, fmt: str, override: str | None = None) -> pd.Ser
     return result
 
 
-def harmonize(cfg: dict) -> pd.DataFrame:
+def harmonize(cfg: dict, require_one_year: bool = True) -> pd.DataFrame:
     supplied = cfg["inputs"].get("clinical_csv")
     raw_path = resolve(cfg, supplied) if supplied else outdir(cfg) / "extracted/clinical_raw.csv"
     if not raw_path.is_file():
         raise DataError("Clinical input missing. Run extract or explicitly set inputs.clinical_csv")
     raw = read_csv(raw_path)
+    spelling = {c.lower(): c for c in raw}
+    raw = raw.rename(columns={spelling[c.lower()]: c for c in FIELDS if c.lower() in spelling})
     unique_ids(raw, "code_n", str(raw_path))
     fp = cfg["inputs"].get("clinical_formats_json")
     formats = read_json(resolve(cfg, fp)) if fp else read_json(outdir(cfg) / "extracted/formats.json")
@@ -65,7 +67,10 @@ def harmonize(cfg: dict) -> pd.DataFrame:
             if codes:
                 invalid = x.notna() & ~x.isin(codes)
                 if invalid.any():
-                    raise DataError(f"{source}: invalid codes {sorted(x[invalid].unique())}; no guessing")
+                    if source in LONGTERM_FIELDS:
+                        issues.append({"source": source, "invalid_optional_values": int(invalid.sum())})
+                    else:
+                        raise DataError(f"{source}: invalid codes {sorted(x[invalid].unique())}; no guessing")
             bad_text = raw[source].ne("") & x.isna()
             permitted_missing = raw[source].str.match(r"^\.?[A-Z_]$|^\.$|^$", na=False)
             if source in UNKNOWN_98:
@@ -77,12 +82,16 @@ def harmonize(cfg: dict) -> pd.DataFrame:
             result[name] = x.astype(float)
     required = ["code_n", "AGE", "D_DIAG", "BSL_HCY", "y1_is", "y1_is_dd",
                 "ONSET_D", "I_BLDSAMP_DT"]
+    if not require_one_year:
+        required = [c for c in required if c not in {"y1_is", "y1_is_dd"}]
     if set(required) & set(absent):
         raise DataError(f"Missing required columns: {sorted(set(required) & set(absent))}")
     for c, lower, upper in [("nihss", 0, 42), ("mrs12", 0, 5), ("pre_mrs", 0, 5)]:
         invalid = result[c].notna() & (~result[c].between(lower, upper) | (result[c] % 1 != 0))
         if invalid.any():
             raise DataError(f"{c}: score outside supplied dictionary coding")
+    # Long-term scores are validated per year, so a new optional field cannot
+    # remove cases from the existing one-year analysis.
     # Day precision is the common denominator; same-day order remains unknown.
     onset = result.onset_date.dt.normalize()
     result["sample_day"] = (result.sample_date.dt.normalize() - onset).dt.days.astype(float)
@@ -106,7 +115,8 @@ def harmonize(cfg: dict) -> pd.DataFrame:
     result.attrs["absent_source_columns"] = absent
     out = outdir(cfg)
     dump_json(out / "prepared/harmonization.json", {"absent_source_columns": absent, "issues": issues,
-              "endpoint": "y1_is + y1_is_dd only", "date_resolution": "calendar days"})
+              "endpoint": "y1_is + y1_is_dd only" if require_one_year else "supplied year2-year5 IS + IS_DD",
+              "date_resolution": "calendar days"})
     (out / "prepared").mkdir(parents=True, exist_ok=True)
     result.to_csv(out / "prepared/clinical.csv", index=False)
     return result

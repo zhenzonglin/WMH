@@ -27,7 +27,9 @@ def required_covariates(kind: str = "main") -> list[str]:
     return adjustment_columns(kind)
 
 
-def impute(data: pd.DataFrame, cfg: dict, kind: str = "main") -> tuple[list[pd.DataFrame], dict]:
+def impute(data: pd.DataFrame, cfg: dict, kind: str = "main", *,
+           survival_auxiliaries: bool = True, death_auxiliaries: bool = True,
+           functional_outcome: str = "mrs12") -> tuple[list[pd.DataFrame], dict]:
     cols = required_covariates(kind)
     for col in cols:
         if col not in data or data[col].notna().sum() == 0:
@@ -48,16 +50,18 @@ def impute(data: pd.DataFrame, cfg: dict, kind: str = "main") -> tuple[list[pd.D
     if kind == "month3":
         working["_H0W"] = (working._H0-working._H0.mean())*(working._W-working._W.mean())
         working["_sample3_day"] = data.sample3_day
-    survival = kind != "cross_sectional"
+    survival = kind != "cross_sectional" and survival_auxiliaries
     if survival:
         working["_D1"] = data.event_type.eq(1).astype(int)
-        working["_D2"] = data.event_type.eq(2).astype(int)
+        if death_auxiliaries:
+            working["_D2"] = data.event_type.eq(2).astype(int)
         working["_NA1"] = nelson_aalen_increment(data, 1)
-        working["_NA2"] = nelson_aalen_increment(data, 2)
+        if death_auxiliaries:
+            working["_NA2"] = nelson_aalen_increment(data, 2)
         working["_entry"] = data.entry
         working["_stop"] = data.exit
     if kind.startswith("functional"):
-        working["_mrs"] = data.mrs12
+        working["_mrs"] = data[functional_outcome]
     working = working.reset_index(drop=True)
     missing = {c: int(data[c].isna().sum()) for c in cols}
     if not any(missing.values()):

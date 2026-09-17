@@ -12,7 +12,7 @@ from .workstation import default_config, load_workstation
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="CNSR-III Hcy–WMH, Python-only observational analysis")
-    parser.add_argument("command", choices=["configure", "audit", "image-audit", "run", "doctor", "extract", "prepare", "analyse", "report", "demo"])
+    parser.add_argument("command", choices=["configure", "audit", "image-audit", "run", "doctor", "extract", "prepare", "analyse", "report", "demo", "longterm"])
     parser.add_argument("--config", default=None, help="Defaults to workstation.local.yml when present, otherwise analysis.yml")
     parser.add_argument("--sas-dir", help="SAS directory, recursively scanned; configure command")
     parser.add_argument("--sustain-dir", help="Original SuStaIn project or derivatives directory; configure command")
@@ -21,6 +21,8 @@ def main() -> int:
     parser.add_argument("--through", choices=["audit", "prepare", "analyse", "report"], default="prepare")
     parser.add_argument("--n", type=int, default=900, help="Synthetic sample size for demo only")
     parser.add_argument("--hypothesis", choices=["H1", "H2", "H3", "H4"], help="Run one hypothesis; default runs H1-H4")
+    parser.add_argument("--years", type=int, nargs="+", choices=[2, 3, 4, 5],
+                        default=[2, 3, 4, 5], help="Cumulative horizons for longterm; default 2 3 4 5")
     args = parser.parse_args()
     cfg = None
     try:
@@ -30,6 +32,11 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         cfg = load_workstation(args.config, args.command)
+        if args.command == "longterm":
+            from .longterm import run_longterm
+            result = run_longterm(cfg, args.years, args.through, args.hypothesis)
+            print(result["status"], result.get("report", result["result_dir"]))
+            return 2 if result["status"] == "COMPLETED_WITH_MODEL_FAILURES" else 0
         if args.command == "audit":
             from .audit import clinical_audit
             result = clinical_audit(cfg)

@@ -136,3 +136,14 @@ def test_moved_latest_directory_and_page_two(tmp_path, monkeypatch, capsys):
     assert REPORTER.main() == 0
     text = capsys.readouterr().out
     assert "run=moved-run" in text and "[2/2]" in text
+
+
+def test_longterm_screenshots_use_separate_pointer(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "longterm/results/check"
+    write_json(root / "status.json", {"mode": "synthetic", "status": "PREPARED", "analyses": {
+        "year2/H2": {"n": 120, "events": 20, "status": "PREPARED"}}})
+    write_json(tmp_path / "longterm/latest_results.json", {"path": str(root)})
+    monkeypatch.setattr("sys.argv", ["diagnose_results.py", "--output-dir", str(tmp_path), "--longterm"])
+    assert REPORTER.main() == 0
+    text = capsys.readouterr().out
+    assert "year2/H2" in text and "120" in text and "SUPPLEMENTARY" in text
