@@ -29,7 +29,9 @@ def required_covariates(kind: str = "main") -> list[str]:
 
 def impute(data: pd.DataFrame, cfg: dict, kind: str = "main", *,
            survival_auxiliaries: bool = True, death_auxiliaries: bool = True,
-           functional_outcome: str = "mrs12") -> tuple[list[pd.DataFrame], dict]:
+           functional_outcome: str = "mrs12",
+           extra_auxiliaries: pd.DataFrame | None = None,
+           progress=None) -> tuple[list[pd.DataFrame], dict]:
     cols = required_covariates(kind)
     for col in cols:
         if col not in data or data[col].notna().sum() == 0:
@@ -62,6 +64,14 @@ def impute(data: pd.DataFrame, cfg: dict, kind: str = "main", *,
         working["_stop"] = data.exit
     if kind.startswith("functional"):
         working["_mrs"] = data[functional_outcome]
+    if extra_auxiliaries is not None:
+        if not extra_auxiliaries.index.equals(data.index):
+            raise DataError("Imputation auxiliaries must have the exact cohort index/order")
+        if set(extra_auxiliaries) & set(working):
+            raise DataError("Duplicate imputation auxiliary names")
+        if not np.isfinite(extra_auxiliaries.to_numpy(float)).all():
+            raise DataError("Non-finite imputation auxiliary values")
+        working = pd.concat([working, extra_auxiliaries], axis=1)
     working = working.reset_index(drop=True)
     missing = {c: int(data[c].isna().sum()) for c in cols}
     if not any(missing.values()):
@@ -74,6 +84,9 @@ def impute(data: pd.DataFrame, cfg: dict, kind: str = "main", *,
     traces = []
     for iteration in range(cfg["analysis"]["mice_iterations"]):
         kernel.mice(1, num_threads=cfg["analysis"]["mice_threads"], num_iterations=60, verbosity=-1)
+        if progress is not None:
+            progress(f"MI iteration {iteration+1}/{cfg['analysis']['mice_iterations']}; "
+                     f"{cfg['analysis']['imputations']} completed datasets")
         for index in range(cfg["analysis"]["imputations"]):
             current = kernel.complete_data(dataset=index)
             traces.append({"iteration": iteration + 1, "imputation": index,

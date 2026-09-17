@@ -44,7 +44,7 @@ def remap_path(cfg: dict, value: str, default: Path) -> Path:
     return Path(value)
 
 
-def read_subject(cfg: dict, subject: Path) -> dict:
+def read_subject(cfg: dict, subject: Path, *, include_gm: bool = True) -> dict:
     w = read_json(subject / "wmh/wmh_features.json")
     s = read_json(subject / "status/wmh.json")
     detail = s.get("details", {})
@@ -70,7 +70,7 @@ def read_subject(cfg: dict, subject: Path) -> dict:
     t = read_json(subject / "t1/t1_features.json")
     row["icv_ml"] = t.get("dlicv_icv", {}).get("icv_label702_ml", np.nan)
     gm = t.get("gm119_ml", {})
-    row["gm119_ml"] = sum(gm.values()) if len(gm) == 119 else np.nan
+    row["gm119_ml"] = sum(gm.values()) if include_gm and len(gm) == 119 else np.nan
     row["icv_source"] = str(subject / "t1/t1_features.json")
     raw_t1 = subject / "t1/nichart_tool_output/DLMUSE_Volumes.csv"
     if raw_t1.is_file():
@@ -81,7 +81,7 @@ def read_subject(cfg: dict, subject: Path) -> dict:
             row["icv_ml"] = float(volumes["702"].iloc[0]) / 1000
             row["icv_source"] = str(raw_t1)
         label_file = cfg["inputs"].get("gm119_labels_json")
-        if pd.isna(row["gm119_ml"]) and label_file:
+        if include_gm and pd.isna(row["gm119_ml"]) and label_file:
             labels = read_json(resolve(cfg, label_file))["labels"]
             columns = [str(x) for x in labels]
             if len(set(columns)) != 119:
@@ -98,7 +98,7 @@ def read_subject(cfg: dict, subject: Path) -> dict:
     return row
 
 
-def read_imaging(cfg: dict) -> pd.DataFrame:
+def read_imaging(cfg: dict, *, include_gm: bool = True) -> pd.DataFrame:
     supplied = cfg["inputs"].get("imaging_csv")
     issues = []
     if supplied:
@@ -113,7 +113,7 @@ def read_imaging(cfg: dict) -> pd.DataFrame:
             if not subject.is_dir():
                 continue
             try:
-                records.append(read_subject(cfg, subject))
+                records.append(read_subject(cfg, subject, include_gm=include_gm))
             except (DataError, OSError, ValueError, KeyError) as exc:
                 issues.append({"participant_id": subject.name, "reason": str(exc)})
         frame = pd.DataFrame(records)

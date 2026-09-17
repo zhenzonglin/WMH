@@ -1,5 +1,7 @@
 # 工作站接入：先核查SAS，再连接WMH，最后启动分析
 
+**当前五年主分析请使用[recurrence v3工作站步骤](recurrence_v3_workstation.md)。本页以下的`run`、`longterm`命令保留用于旧版方案；新版入口是`wmh-hcy recurrence`。**
+
 适用环境：Linux或Windows中的WSL。数据使用`.sas7bdat`文件；代码由Python 3.11运行。Conda与uv两种安装方式使用同一组分析依赖版本，分别通过`requirements-conda.txt`与`uv.lock`安装。工作站无需R、MATLAB、GPU或SuStaIn模型运行环境；本项目读取已经产出的WMH结果。
 
 ## 1. 下载项目与安装环境

@@ -36,7 +36,8 @@ def sas_date(series: pd.Series, fmt: str, override: str | None = None) -> pd.Ser
     return result
 
 
-def harmonize(cfg: dict, require_one_year: bool = True) -> pd.DataFrame:
+def harmonize(cfg: dict, require_one_year: bool = True, *, source_fields=None,
+              required_sources=None) -> pd.DataFrame:
     supplied = cfg["inputs"].get("clinical_csv")
     raw_path = resolve(cfg, supplied) if supplied else outdir(cfg) / "extracted/clinical_raw.csv"
     if not raw_path.is_file():
@@ -52,7 +53,7 @@ def harmonize(cfg: dict, require_one_year: bool = True) -> pd.DataFrame:
     issues = []
     absent = []
     for source, (name, kind, codes) in FIELDS.items():
-        if source not in raw:
+        if source not in raw or (source_fields is not None and source not in source_fields):
             result[name] = pd.NaT if kind in {"date", "datetime"} else np.nan
             absent.append(source)
             continue
@@ -84,6 +85,8 @@ def harmonize(cfg: dict, require_one_year: bool = True) -> pd.DataFrame:
                 "ONSET_D", "I_BLDSAMP_DT"]
     if not require_one_year:
         required = [c for c in required if c not in {"y1_is", "y1_is_dd"}]
+    if required_sources is not None:
+        required = list(required_sources)
     if set(required) & set(absent):
         raise DataError(f"Missing required columns: {sorted(set(required) & set(absent))}")
     for c, lower, upper in [("nihss", 0, 42), ("mrs12", 0, 5), ("pre_mrs", 0, 5)]:
@@ -115,7 +118,10 @@ def harmonize(cfg: dict, require_one_year: bool = True) -> pd.DataFrame:
     result.attrs["absent_source_columns"] = absent
     out = outdir(cfg)
     dump_json(out / "prepared/harmonization.json", {"absent_source_columns": absent, "issues": issues,
-              "endpoint": "y1_is + y1_is_dd only" if require_one_year else "supplied year2-year5 IS + IS_DD",
+              "endpoint": ("Y5_IS + Y5_IS_DD only; annual records checked for consistency"
+                           if required_sources is not None and "Y5_IS" in required_sources
+                           else "y1_is + y1_is_dd only" if require_one_year
+                           else "supplied year2-year5 IS + IS_DD"),
               "date_resolution": "calendar days"})
     (out / "prepared").mkdir(parents=True, exist_ok=True)
     result.to_csv(out / "prepared/clinical.csv", index=False)

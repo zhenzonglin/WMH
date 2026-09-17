@@ -1,10 +1,27 @@
-# CNSR-III：Hcy–WMH四假设分析项目 v2
+# CNSR-III：Hcy–WMH五年首次缺血性复发分析 v3
 
 这是基于既有WMH分割产物和已提供临床字段的纯Python分析项目。支持Ubuntu或WSL工作站，不依赖R，也不使用中心变量。
 
 **仓库包含代码、方法学材料和合成数据验证。真实患者分析在数据所在工作站执行，患者数据及结果不随仓库发布。** 合成数据事件率、样本量、效应和P值不能用于论文结果。
 
-## 在另一台工作站开始
+## 当前研究入口：五年主分析，其他月份敏感性
+
+2026-09-17修订后的核心问题：**基线Hcy与五年首次缺血性卒中复发的关联，是否因WMH负担而不同？** 已查看一年结果，这次修订不称为原先预注册的确认性分析。
+
+```bash
+conda activate wmh-hcy
+git pull --ff-only
+wmh-hcy recurrence --through prepare
+python scripts/diagnose_recurrence.py
+# 检查本次病例/事件数后：
+wmh-hcy recurrence --through report
+```
+
+同一份五年终点记录截断为3、6、12、24、36、48、60个月。各时点共享核心插补和指标尺度；不拟合死亡模型、不计算绝对风险、不调用bootstrap。结果写入`outputs/real/recurrence_v3/`，旧结果保留。
+
+[新版统计分析计划](docs/recurrence_v3_plan.md) · [新版工作站步骤](docs/recurrence_v3_workstation.md)。新分析只需本版字段，三个月血液、mRS及T1灰质资料不阻碍运行。以下保留旧版H1–H4的操作与背景，`run`和`longterm`仍属于旧方案。
+
+## 旧版H1–H4：在另一台工作站开始
 
 在Linux或WSL终端执行。已有Conda时可直接使用：
 

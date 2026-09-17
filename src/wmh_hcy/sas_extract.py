@@ -48,7 +48,8 @@ def sas_to_csv(path, target, selected, options, column_map=None):
     return count, missing_meta
 
 
-def inventory(cfg: dict, errors: list | None = None) -> list[dict]:
+def inventory(cfg: dict, errors: list | None = None, *, fields=None) -> list[dict]:
+    fields = FIELDS if fields is None else fields
     paths = sorted({Path(p).resolve() for pattern in cfg["inputs"]["sas_globs"]
                     for p in glob.glob(str(resolve(cfg, pattern)), recursive=True)
                     if Path(p).is_file() and Path(p).suffix.lower() == ".sas7bdat"})
@@ -63,7 +64,7 @@ def inventory(cfg: dict, errors: list | None = None) -> list[dict]:
             errors.append({"path": str(path), "reason": str(exc)})
             continue
         spelling = {c.lower(): c for c in meta.column_names}
-        field_columns = {c: spelling[c.lower()] for c in FIELDS if c.lower() in spelling}
+        field_columns = {c: spelling[c.lower()] for c in fields if c.lower() in spelling}
         records.append({
             "path": str(path), "basename": path.name, "bytes": path.stat().st_size,
             "mtime_ns": path.stat().st_mtime_ns, "rows": meta.number_rows,
@@ -74,9 +75,9 @@ def inventory(cfg: dict, errors: list | None = None) -> list[dict]:
     return records
 
 
-def resolve_owners(inv: list[dict], cfg: dict) -> tuple[dict, list[dict]]:
+def resolve_owners(inv: list[dict], cfg: dict, *, fields=None) -> tuple[dict, list[dict]]:
     owner, issues = {}, []
-    for source in FIELDS:
+    for source in (FIELDS if fields is None else fields):
         if source == "code_n":
             continue
         choices = [r for r in inv if source in r["matched"]]
@@ -116,13 +117,13 @@ def doctor(cfg: dict) -> dict:
     return result
 
 
-def extract(cfg: dict) -> Path:
-    inv = inventory(cfg)
+def extract(cfg: dict, *, fields=None) -> Path:
+    inv = inventory(cfg, fields=fields)
     if not inv:
         raise DataError("No SAS files found. Set inputs.sas_globs; patient data are not bundled.")
     out = outdir(cfg) / "extracted"
     out.mkdir(parents=True, exist_ok=True)
-    owner, issues = resolve_owners(inv, cfg)
+    owner, issues = resolve_owners(inv, cfg, fields=fields)
     if issues:
         raise DataError(f"Ambiguous SAS sources: {issues}")
     merged = None

@@ -12,7 +12,7 @@ from .workstation import default_config, load_workstation
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="CNSR-III Hcy–WMH, Python-only observational analysis")
-    parser.add_argument("command", choices=["configure", "audit", "image-audit", "run", "doctor", "extract", "prepare", "analyse", "report", "demo", "longterm", "check-fit"])
+    parser.add_argument("command", choices=["configure", "audit", "image-audit", "run", "doctor", "extract", "prepare", "analyse", "report", "demo", "longterm", "check-fit", "recurrence"])
     parser.add_argument("--config", default=None, help="Defaults to workstation.local.yml when present, otherwise analysis.yml")
     parser.add_argument("--sas-dir", help="SAS directory, recursively scanned; configure command")
     parser.add_argument("--sustain-dir", help="Original SuStaIn project or derivatives directory; configure command")
@@ -32,6 +32,13 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
         cfg = load_workstation(args.config, args.command)
+        if args.command == "recurrence":
+            from .recurrence import run_recurrence
+            if args.hypothesis is not None:
+                raise DataError("recurrence has one primary interaction; do not pass --hypothesis")
+            result = run_recurrence(cfg, args.through)
+            print(result["status"], result.get("report", result["result_dir"]))
+            return 2 if result["status"] == "COMPLETED_WITH_MODEL_FAILURES" else 0
         if args.command == "check-fit":
             from .fit_check import check_fit
             result = check_fit(cfg, args.hypothesis or "H3")

@@ -1,5 +1,7 @@
 # WMH analysis project
 
+- Current primary workflow is `wmh-hcy recurrence` under `docs/recurrence_v3_plan.md` (2026-09-17, after reviewing year-one results). One Y5_IS/Y5_IS_DD cohort, seven truncation horizons, shared core MI and frozen design; no death regression, absolute risk or bootstrap. Preserve legacy H1-H4/longterm files and pointers. New output root is recurrence_v3. See recurrence_v3_workstation.md for the current startup/audit instructions; older bullets apply to legacy workflows only.
+
 - Work in the existing clone. All statistical code is Python 3.11. Support either `conda env create -f environment.yml` or `uv sync --frozen`. Conda uses the version pins exported from `uv.lock` into `requirements-conda.txt`; do not independently upgrade analysis dependencies.
 - Patient data are external and read-only. Never commit raw SAS, patient CSV, images, ID maps, local configurations, or outputs. Public SAS fixtures under `tests/fixtures/sas` are the only bundled SAS data.
 - The workstation configuration is `config/workstation.local.yml`. Start with `wmh-hcy audit`; accept the actual SuStaIn path with `configure --sustain-dir`; then run through `prepare` before fitting models.
