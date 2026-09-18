@@ -130,7 +130,7 @@ def test_invalid_month3_cysc_only_blocks_its_kidney_cohort(tmp_path, in_cohort):
         assert row.state60.isna().all() and row.cysc3.isna().all()
 
 
-def test_invalid_cec_exposure_remains_reviewable_after_exclusion(tmp_path):
+def test_invalid_cec_exposure_is_excluded_without_blocking(tmp_path):
     cfg = make_demo(tmp_path/'demo', n=150)
     source = cfg['inputs']['clinical_csv']
     raw = pd.read_csv(source, dtype=str, keep_default_na=False)
@@ -138,8 +138,10 @@ def test_invalid_cec_exposure_remains_reviewable_after_exclusion(tmp_path):
     raw.loc[:3, 'CEC'] = ['-1', 'inf', 'bad', '0']
     raw.to_csv(source, index=False)
     state = prepare(cfg, 'cec')
-    assert state['status'] == 'REVIEW_REQUIRED'
-    assert state['audit']['invalid_primary_covariates_require_review'] == ['CEC']
+    assert state['status'] == 'PREPARED'
+    assert state['audit']['invalid_primary_covariates_require_review'] == []
+    assert state['audit']['cec_invalid_policy']['all_extracted'] == 3
+    assert state['audit']['cec_invalid_policy']['remaining_eligible'] == 0
     assert state['audit']['invalid_fields_eligible'] == []
     lines = '\n'.join(diagnose(cfg, 3))
     assert 'unparseable=1; nonfinite=1; zero=1; negative=1; positive=146' in lines

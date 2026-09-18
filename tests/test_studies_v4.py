@@ -12,7 +12,7 @@ from wmh_hcy.studies.runner import prepare, study_sources
 
 
 def test_v4_removes_retired_fields_from_every_study_but_retains_hdl():
-    assert CONTRACT == 'imaging_four_studies_20260918_v4'
+    assert CONTRACT == 'imaging_four_studies_20260918_v5'
     retired = {'IMG_ICAS', 'Apo_AI'}
     assert not retired & SOURCES.keys()
     for study in STUDIES:

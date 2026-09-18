@@ -166,7 +166,7 @@ def value_page(runs):
             for scope, d in (("all_extracted", raw), ("eligible", raw.loc[raw.code_n.isin(eligible.patient_id)])):
                 _, parts = numeric_parts(d.CEC)
                 lines.append(f"  CEC {scope}: " + "; ".join(f"{k}={int(v.sum())}" for k, v in parts.items()))
-            lines.append("  CEC zero is allowed; negative/nonfinite/unparseable values require assay/coding review, not imputation.")
+            lines.append("  CEC zero is allowed; negative/nonfinite/unparseable values are excluded from CEC analyses, not imputed.")
             lines.append("  CEC unit contract is percent; names alone do not confirm units or baseline sampling.")
         except (DataError, OSError, ValueError) as exc:
             lines.append(f"  CEC value check unavailable: {type(exc).__name__} (check local saved inputs)")

@@ -1,4 +1,4 @@
-"""wmh-study: clinical-data audit first, explicitly separate synthetic demonstrations."""
+"""wmh-study: one-command preparation, analysis and reports; explicit synthetic mode."""
 from __future__ import annotations
 
 import argparse
@@ -11,7 +11,7 @@ from .registry import STUDIES
 def main():
     parser = argparse.ArgumentParser(description="Four independent CNSR-III imaging studies (Python only)")
     sub = parser.add_subparsers(dest="command", required=True)
-    for command in ("audit", "run", "summary", "diagnose"):
+    for command in ("start", "audit", "run", "summary", "diagnose"):
         p = sub.add_parser(command)
         p.add_argument("--config")
         if command not in {"summary", "diagnose"}:
@@ -45,14 +45,25 @@ def main():
                 summary(cfg, args.page)
             else:
                 studies = STUDIES if args.study == "all" else [args.study]
+                through = "report" if args.command == "start" else (
+                    "prepare" if args.command == "audit" else args.through)
                 failures = []
-                for study in studies:
-                    state = run(cfg, study, "prepare" if args.command == "audit" else args.through)
+                attempts = {}
+                for index, study in enumerate(studies, 1):
+                    print(f"[{index}/{len(studies)}] {study} | {cfg['mode']} | through={through}", flush=True)
+                    try:
+                        state = run(cfg, study, through, fresh=args.command == "start")
+                    except (DataError, OSError, ValueError) as exc:
+                        print(f"{study}: FAILED: {exc}", flush=True)
+                        attempts[study] = {"status": "FAILED", "error": str(exc)}
+                        failures.append(study)
+                        continue
+                    attempts[study] = state
                     print_audit(state)
                     if state["status"] in {"INPUTS_REQUIRED", "REVIEW_REQUIRED", "PRIMARY_NOT_ESTIMABLE"}:
                         failures.append(study)
-                if args.command == "run" and args.through == "report":
-                    summary(cfg)
+                if through == "report":
+                    summary(cfg, attempts=attempts)
                 if failures:
                     parser.exit(2, "Review required: " + ", ".join(failures) + "\n")
     except (DataError, OSError, ValueError) as exc:

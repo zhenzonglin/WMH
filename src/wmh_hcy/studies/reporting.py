@@ -115,6 +115,11 @@ def report(folder, state, results):
         sections.append(f'<img src="{figure}" style="max-width:100%" alt="主要结果图">')
     if state["study"] == "bp":
         sections.append("<p>SBP始终连续建模；主图展示样条关联。140 mmHg仅为参照，固定点对比是补充表。阴影为逐点区间。</p>")
+    if state["study"] == "cec" and state.get("audit", {}).get("cec_invalid_policy"):
+        policy = state["audit"]["cec_invalid_policy"]
+        sections.append(f"<p>CEC负值、非有限值及非空不可解析值已排除，不插补。全部提取记录中非法值 {policy['all_extracted']}；"
+                        f"通过此前条件后在CEC步骤排除 {policy['excluded_at_cec_step']}；入组后剩余 {policy['remaining_eligible']}。"
+                        "零值允许，普通缺失单列；不按分位数截尾。其他研究不受CEC排除影响。</p>")
     if state["study"] == "kidney":
         sections.append("<p>主要检验：依赖方程中持续白蛋白尿×标准化WMH，1自由度。三个类别交互的整体检验为次要。"
                         "模型含四类UACR、WMH及三个交互，在依赖和死亡方程中均估计。主要比值表示两组WMH斜率的相对概率比之比。"
@@ -143,10 +148,10 @@ def write_html(path, body):
                     + body + '</html>', encoding="utf-8")
 
 
-def summary(cfg, page=1):
+def summary(cfg, page=1, *, attempts=None):
     from ..common import outdir
     from .runner import read_results, study_root
-    rows = read_results(cfg)
+    rows = read_results(cfg, attempts=attempts)
     path = outdir(cfg) / "studies"
     path.mkdir(parents=True, exist_ok=True)
     rows.to_csv(path / "summary.csv", index=False)
@@ -185,6 +190,8 @@ def print_audit(state):
         print("Entirely missing covariates:", ", ".join(a.get("covariates_entirely_missing", [])) or "none")
         print("Missing counts:", "; ".join(f"{k}:{v}" for k, v in a.get("covariate_missing", {}).items() if v) or "none")
     print("Invalid field counts (all extracted):", a.get("invalid_fields", []))
+    if a.get("cec_invalid_policy"):
+        print("CEC invalid exposure exclusion:", a["cec_invalid_policy"])
     if "invalid_fields_eligible" in a:
         print("Invalid field counts (eligible):", a["invalid_fields_eligible"])
         print("Invalid primary fields requiring review:", a.get("invalid_primary_covariates_require_review", []))

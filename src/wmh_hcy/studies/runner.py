@@ -162,10 +162,23 @@ def prepare(cfg, study):
         if study == "kidney":
             month3_cysc = fields_audit.source.eq("M03_CYSC")
             review_counts.loc[month3_cysc] = fields_audit.loc[month3_cysc, "invalid_eligible"]
+        if study == "cec":
+            cec_field = fields_audit.source.eq("CEC")
+            # Researcher-authorized exclusion: the exposure is never imputed.
+            # All CEC secondary analyses are subsets of this eligible cohort.
+            review_counts.loc[cec_field] = fields_audit.loc[cec_field, "invalid_eligible"]
+            audit["cec_invalid_policy"] = {
+                "action": "exclude_from_cec_study_not_impute",
+                "definition": "negative, nonfinite or nonempty unparseable",
+                "zero_allowed": True,
+                "all_extracted": int(fields_audit.loc[cec_field, "invalid"].sum()),
+                "excluded_at_cec_step": audit["flow_excluded"].get("no_invalid_baseline_cec", 0),
+                "remaining_eligible": int(fields_audit.loc[cec_field, "invalid_eligible"].sum()),
+            }
         invalid_covariates = fields_audit.loc[
             fields_audit.canonical.isin(primary_aliases) & review_counts.gt(0), "source"].tolist()
         audit["invalid_primary_covariates_require_review"] = invalid_covariates
-        audit["invalid_review_scope"] = "M03_CYSC: kidney eligible cohort; other primary fields: all extracted"
+        audit["invalid_review_scope"] = "M03_CYSC: kidney eligible; CEC: eligible after exclusion; other primary fields: all extracted"
         try:
             design = StudyDesign.freeze(data, primary_spec(study))
             filled = data[list(design.spec.predictors)].copy()
@@ -208,9 +221,10 @@ def load_prepared(cfg, study):
     return state
 
 
-def run(cfg, study, through="prepare"):
-    state = load_prepared(cfg, study) if through == "report" else None
+def run(cfg, study, through="prepare", *, fresh=False):
+    state = load_prepared(cfg, study) if through == "report" and not fresh else None
     if state is None:
+        print(f"{study}: preparing current inputs", flush=True)
         state = prepare(cfg, study)
     if through == "prepare" or state["status"] != "PREPARED":
         return state
@@ -219,6 +233,7 @@ def run(cfg, study, through="prepare"):
     master = pd.read_csv(folder / "master.csv", dtype={"patient_id": str})
     state["status"] = "ANALYSING"
     dump_json(folder / "status.json", state)
+    print(f"{study}: preparation passed; starting models and report automatically", flush=True)
     results = run_study(data, master, study, folder, settings(cfg))
     from .reporting import report
     report(folder, state, results)
@@ -229,11 +244,16 @@ def run(cfg, study, through="prepare"):
     return state
 
 
-def read_results(cfg):
+def read_results(cfg, *, attempts=None):
     rows = []
     for study in STUDIES:
         pointer = read_json(study_root(cfg, study) / "latest_results.json")
         row = {"study": study, "status": "NOT_RUN", "p": float("nan")}
+        attempt = (attempts or {}).get(study)
+        if attempt and attempt.get("status") != "COMPLETED":
+            row.update({k: attempt[k] for k in ("status", "error", "run") if k in attempt})
+            rows.append(row)
+            continue
         if pointer:
             folder = Path(pointer["path"])
             result = read_json(folder / "primary/result.json")

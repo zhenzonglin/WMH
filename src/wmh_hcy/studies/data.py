@@ -117,6 +117,9 @@ def read_clinical(cfg, *, invalid_masks=None):
             bad = int(invalid.sum())
             value = value.mask(invalid | known_unknown)
         columns[name] = value
+        if name == "cec":
+            # Preserve the reason for exposure exclusion after masking invalid values.
+            columns["cec_invalid"] = invalid.copy()
         if invalid_masks is not None:
             invalid_masks[source] = invalid.copy()
         audits.append({"source": source, "canonical": name, "present": present,
@@ -246,7 +249,8 @@ def build_cohort(master, study, month=3):
             ("followup_after_visit", d.exit.gt(d.entry)),
         ]
     elif study == "cec":
-        rules += [("observed_baseline_cec", np.isfinite(d.cec) & d.cec.ge(0)),
+        rules += [("no_invalid_baseline_cec", ~number(d, "cec_invalid").eq(1)),
+                  ("observed_baseline_cec", np.isfinite(d.cec) & d.cec.ge(0)),
                   ("known_baseline_sample_time", np.isfinite(d.sample_day) & d.sample_day.ge(0))]
     elif study == "kidney":
         rules.append(("both_uacr_observed", np.isfinite(d.albuminuria)))

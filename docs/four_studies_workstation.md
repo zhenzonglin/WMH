@@ -2,7 +2,7 @@
 
 新命令是 `wmh-study`。已有 `wmh-hcy`、一年分析和 `recurrence_v3` 的结果及指针均保留。无需重新整理原始SAS或SuStaIn目录。
 
-当前为第四版 `imaging_four_studies_20260918_v4`：保留recovery、bp、cec、kidney，取消神经酰胺和视觉重度WMH子组。IMG_ICAS和Apo_AI不再进入任何本版研究的字段提取、插补或模型；不再要求补齐，也不再安排Apo_AI扩展。冠心病跳答核查、CEC主模型HDL-C调整保持不变。汇总使用四项Holm校正；旧合同结果标为PREVIOUS_VERSION。
+当前为第五版 `imaging_four_studies_20260918_v5`。CEC非法值按研究者决定排除，不再要求确认；一条 `wmh-study start` 自动完成最新数据准备和全部四项分析。IMG_ICAS、Apo_AI、神经酰胺和视觉重度WMH分析继续停用；其余模型、协变量及50份插补设置保持不变。汇总使用四项Holm校正，旧合同结果保留并标为PREVIOUS_VERSION。
 
 ## 第一步 更新代码和入口
 
@@ -28,8 +28,9 @@ conda activate wmh-hcy
 若使用精简代码目录 `WMH-code-v3`，在该目录更新代码，再回到原 `WMH` 目录读取本地配置：
 
 ```bash
-git -C /data/usersdir/linzhenzong/WMH-code-v3 pull --ff-only
-cd /data/usersdir/linzhenzong/WMH
+git -C /data/usersdir/linzhenzong/WMH-code-v3 pull --ff-only &&
+cd /data/usersdir/linzhenzong/WMH &&
+wmh-study start
 ```
 
 适用于已从 `WMH-code-v3` 执行过 `pip install --no-deps -e .` 的环境。纯Python代码修订无需重新安装依赖。不要在精简代码目录运行真实审计，否则不会读取原目录的 `config/workstation.local.yml`。首次精简克隆的旧Git兼容方式为 `clone --no-checkout --depth 1 --filter=blob:none` 后，在新目录依次执行 `sparse-checkout init --cone`、`sparse-checkout set src config scripts`、`checkout main`；避免在旧Git中直接使用 `clone --sparse`。
@@ -42,40 +43,40 @@ wmh-hcy configure --sas-dir "/实际SAS目录" --sustain-dir "/实际SuStaIn产�
 
 如患者编号需要映射，在本地配置 `inputs.id_map_csv` 指定含 `participant_id,code_n` 两列的CSV。字符串精确连接，保留前导零。重复ID或多文件同名变量有冲突时，脚本会停止对应研究；在 `variable_sources` 中明确来源，不通过文件顺序选择。
 
-## 第二步 先审计 不拟合
+## 一键完成数据准备 分析和报告
+
+```bash
+wmh-study start
+```
+
+如果已执行上方的更新及启动命令，不需要再次执行。start等价于选择全部四项并运行至report，但每次都会从最新输入重新准备，避免沿用更新前的准备快照。它递归扫描SAS、提取各研究字段、连接影像、建立队列，通过检查后直接拟合并生成报告；全程不等待人工确认。终端按1/4至4/4显示研究进度。
+
+需要只重跑某项时，可以选择：
+
+```bash
+wmh-study start --study recovery
+wmh-study start --study bp
+wmh-study start --study cec
+wmh-study start --study kidney
+```
+
+CEC排除只影响CEC研究全部主、次要及敏感性分析，不影响其他队列。`COMPLETED`表示该研究主模型已估计且报告已生成；补充模型状态另列。真实输入缺失、单位冲突或数值失败仍明确报告，不自动删协变量；某项不能运行时继续其余研究，最终返回非零退出码。字段来源在 `field_audit.csv`，排除计数在 `cohort_flow.csv`。终端状态区分本次完成、准备阻断和未估计。
+
+每次start生成新时间戳目录，不覆盖旧运行。无须预先使用audit，也无须准备完成后再输入run。
+
+## 可选诊断与旧接口
 
 ```bash
 wmh-study audit --study all
+wmh-study run --study all --through prepare
+wmh-study run --study all --through report
 ```
 
-它递归扫描多份SAS，提取研究白名单CSV，连接既有影像，分别建立四个队列。每项显示来源、例数、结局数、缺失、排除和参数数。可以逐项运行，方便截图：
-
-```bash
-wmh-study audit --study recovery
-wmh-study audit --study bp
-wmh-study audit --study cec
-wmh-study audit --study kidney
-```
-
-`PREPARED` 表示该队列已准备好，不代表已有统计结果。`REVIEW_REQUIRED` 会列出整列缺失、非法协变量编码或设计阻断；`INPUTS_REQUIRED` 表示文件、日期、ID或来源接口需要修正。一项失败不会停止其余项审计。详细字段来源及实际观测数在该运行的 `field_audit.csv`，病例流程在 `cohort_flow.csv`。
-
-`wmh-study run --study all --through prepare` 与上述审计执行相同的数据准备步骤。每次准备生成新时间戳目录，不覆盖旧运行。
-
-## 第三步 分项执行模型
-
-```bash
-wmh-study run --study recovery --through report
-wmh-study run --study bp --through report
-wmh-study run --study cec --through report
-wmh-study run --study kidney --through report
-wmh-study summary --page 1
-```
-
-如果已有同配置、未分析的准备快照，报告命令使用该快照；它校验派生文件哈希。原始数据若已更新，必须重新执行 `audit` 或 `--through prepare`。已经完成的分析再次执行时会建立新运行，不覆盖原结果。
+这些命令仅供需要单独准备或检查时使用，不是一键分析的前置步骤。旧run接口仍可复用同配置、同代码且未分析的准备快照，并校验派生文件哈希；更新原始数据后建议直接使用start，确保重新提取。
 
 默认每个研究模型插补50份、迭代10次。不同次要结局、扩展协变量或研究人群可能需要重新插补，以包含该模型实际结局；不会沿用Hcy插补公式。完整病例分析不插补。过程会打印插补和模型进度。真实研究不要采用演示的2份插补配置。
 
-## 第四步 查看或截图反馈
+## 查看结果或截图反馈
 
 如果审计显示 `REVIEW_REQUIRED`，先使用以下三页只读诊断，无需重复提取SAS或重新拟合：
 
@@ -89,7 +90,9 @@ wmh-study diagnose --page 3
 
 空的主要队列显示协变量缺失“未评估”，不能据此认为原始年龄等所有字段都不存在。`M03_CYSC`非法值计数来自临床提取表，第三页另列其中进入肾脏分析队列的人数。`H_CHD`仅依据本次已确认规则补齐：H_HD=1补0，H_CHD_TP非空补1。冲突单列，其他缺失不当作0。原始值和推导值均保留；第3页列出规则补齐及冲突计数。
 
-异常审计同时保存全部提取记录与本研究入组队列的计数，后者为 `field_audit.csv` 的 `invalid_eligible`。本次修复限定为肾脏研究的 `M03_CYSC`：只有入组队列中的异常值阻断，已按既定规则排除者的异常不阻断；该队列包含五年状态尚未知的入组者。这个恢复期指标不用于更大的基线结构子研究。其他字段保留原有核查范围，避免遗漏血压研究独立12个月队列等人群中的异常。CEC负值、非有限值或不可解析值仍要求确认检测/编码，零值沿用现有规则允许。不会自动改变阈值、将异常值插补或丢弃全部异常记录。旧审计没有队列内计数时，需重跑对应研究的 `audit`，只读诊断本身不改变状态。
+异常审计保存全部提取记录与入组队列计数，后者为 `field_audit.csv` 的 `invalid_eligible`。CEC负值、非有限值、非空不可解析值排除，零值仍允许；空白及SAS缺失另列，不按分位数截尾。`audit.json`的 `cec_invalid_policy` 记录全部非法值人数、在CEC步骤排除人数和入组后剩余非法值人数；较早已因其他条件排除者不重复计数。仅修改派生队列，不改原始SAS，不插补CEC。
+
+肾脏研究M03_CYSC仅检查其起点队列（包括五年结局未知者）中的非法值，已排除者不阻断；其他字段保持原核查范围。start会自动生成最新审计；只读diagnose本身不改变状态。
 
 ```bash
 wmh-study summary --page 1
