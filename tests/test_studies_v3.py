@@ -54,7 +54,7 @@ def test_four_active_studies_no_ceramides_no_visual_score_dependency():
     assert STUDIES == ('recovery', 'bp', 'cec', 'kidney')
     assert not any('cer' in s.lower() or 'WMH_Score' in s for s in SOURCES)
     assert {'H_HD', 'H_CHD_TP', 'H_CHD'} <= study_sources('bp').keys()
-    assert 'Apo_AI' in study_sources('cec')
+    assert not {'IMG_ICAS', 'Apo_AI'} & SOURCES.keys()
     for study in ('recovery', 'cec', 'kidney'):
         assert not {'H_HD', 'H_CHD_TP', 'H_CHD'} & study_sources(study).keys()
     with pytest.raises(DataError, match='not active'):
@@ -110,7 +110,7 @@ def test_four_test_holm_excludes_retired_and_previous_contracts(tmp_path):
     assert_allclose(result.p_holm_four, [.04, .06, .4, .4])
     assert len(result) == 4 and 'p_holm_five' not in result
     old = tmp_path/'studies'/FOLDERS['bp']/'runs/new/status.json'
-    dump_json(old, {'contract': 'imaging_five_studies_20260917_v2'})
+    dump_json(old, {'contract': 'imaging_four_studies_20260918_v3'})
     result = read_results(cfg).set_index('study')
     assert result.loc['bp', 'status'] == 'PREVIOUS_VERSION' and pd.isna(result.loc['bp', 'p_holm_four'])
     assert retired.exists()

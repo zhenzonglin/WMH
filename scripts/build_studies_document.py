@@ -118,7 +118,7 @@ def main():
             doc.add_paragraph().paragraph_format.space_after = Pt(2)
         else:
             doc.add_paragraph(line)
-    target = ROOT / "docs/CNSRIII_四项独立研究统计分析方案_20260918.docx"
+    target = ROOT / "docs/CNSRIII_四项独立研究统计分析方案_20260918_v4.docx"
     doc.core_properties.title = "CNSR III影像与长期预后四项独立研究统计分析方案"
     doc.core_properties.subject = "四项独立研究 统计方法及工作站实施"
     doc.core_properties.author = "CNSR III研究项目"

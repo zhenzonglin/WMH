@@ -108,7 +108,7 @@ def read_clinical(cfg, *, invalid_masks=None):
             if name.startswith("mrs"):
                 invalid |= value.notna() & (~value.between(0, 6) | value.mod(1).ne(0))
             # Positivity is a measurement contract, not percentile trimming.
-            if name in {"cysc", "cysc3", "tg", "hdl", "ldl", "apo_ai", "bmi"}:
+            if name in {"cysc", "cysc3", "tg", "hdl", "ldl", "bmi"}:
                 invalid |= value.notna() & value.le(0)
             if name in {"uacr0", "uacr3", "cec"}:
                 invalid |= value.notna() & value.lt(0)

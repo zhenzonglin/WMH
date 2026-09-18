@@ -28,12 +28,12 @@ def test_saved_metadata_candidates_do_not_map_names(tmp_path):
     dump_json(tmp_path/'source_inventory.json', [{
         'path': '/private/chemistry.sas7bdat', 'mtime_ns': 1, 'bytes': 500,
         'columns': ['other_name', 'CEC', 'Apo_AI'],
-        'labels': {'other_name': 'intracranial stenosis'},
+        'labels': {'other_name': 'cholesterol efflux'},
     }])
     before = sha256(tmp_path/'source_inventory.json')
     text = '\n'.join(candidate_page({'cec': tmp_path}))
-    assert 'CEC: candidates=1' in text and 'APO_AI: candidates=1' in text
-    assert 'ICAS: candidates=1' in text and 'other_name' in text
+    assert 'CEC: candidates=2' in text and 'other_name' in text
+    assert 'ICAS' not in text and 'Apo_AI' not in text and 'APO_AI' not in text
     assert 'NOT mapped' in text and '/private/' not in text
     assert sha256(tmp_path/'source_inventory.json') == before
 

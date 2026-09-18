@@ -234,7 +234,6 @@ def run_study(data, master, study, directory, settings):
         compare.to_csv(directory / "cec_hdl_comparison.csv", index=False)
         wmh = data.loc[volume_ok(data, "wmh_ml")]
         run(wmh, primary.variant("white_matter", outcome="log_wmh", tier="secondary"), inherited=frozen)
-        run(data, primary.variant("apo_ai_adjusted", covariates=primary.covariates+("apo_ai",), tier="secondary"), inherited=frozen)
         valid = data.loc[~data.state60_conflict]
         run(valid, functional_spec(primary, "function60"), inherited=frozen)
         run(valid, functional_spec(primary, "function60_with_gm", ("gm119_ml",)), inherited=frozen)

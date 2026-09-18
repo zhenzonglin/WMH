@@ -2,7 +2,7 @@
 
 当前研究为：早期功能独立后的远期失能、恢复期血压与WMH、CEC与灰质结构、脑肾微血管损伤。四个队列分别建立，不要求Hcy，不以其他研究的检测完整性限制入组。原编号01、02、05、06保留。
 
-当前为第三版：取消神经酰胺研究和视觉评分定义的重度WMH子组；使用影像提取的连续WMH体积。血压研究新增H_HD与H_CHD_TP的冠心病跳答核查。CEC保留Apo_AI扩展、同样本同插补的HDL-C调整前后比较；脑肾保留持续白蛋白尿×WMH主要检验。汇总为四项Holm校正。旧版结果保留并标为 `PREVIOUS_VERSION`。详见[第三版修订与验证](docs/four_studies_revision_v3.md)。
+当前为第四版：按研究者决定移除IMG_ICAS调整项和Apo_AI扩展分析，两字段不再进入提取、插补、模型或缺失诊断。此前已取消神经酰胺研究和视觉评分定义的重度WMH子组。血压保留连续WMH交互及冠心病跳答核查；CEC保留同样本同插补的HDL-C调整前后比较；脑肾保留持续白蛋白尿×WMH主要检验。汇总为四项Holm校正。旧版结果保留并标为 `PREVIOUS_VERSION`。详见[第四版修订与验证](docs/four_studies_revision_v4.md)。
 
 补充SAS字段后重新执行审计。随后可用 `wmh-study diagnose --page 1`、`--page 2`、`--page 3` 查看来源、候选名称、冠心病规则补齐和异常计数，方便截图反馈。参见[工作站操作](docs/four_studies_workstation.md)。
 
@@ -16,7 +16,7 @@ wmh-study run --study recovery --through report
 wmh-study summary --page 1
 ```
 
-[四项统计方案](docs/four_studies_plan.md) · [Word方案](docs/CNSRIII_四项独立研究统计分析方案_20260918.docx) · [工作站操作](docs/four_studies_workstation.md) · [本版验证](docs/four_studies_revision_v3.md) · [合成演示](examples/studies_demo_v3/README.md)。复用现有多SAS、SuStaIn与精确ID配置；Python 3.11、Conda兼容。新结果写入 `outputs/real/studies/`。旧五项研究文档、示例及Hcy历史结果保留，以下内容是历史方案说明。
+[四项统计方案](docs/four_studies_plan.md) · [Word方案](docs/CNSRIII_四项独立研究统计分析方案_20260918_v4.docx) · [工作站操作](docs/four_studies_workstation.md) · [本版验证](docs/four_studies_revision_v4.md) · [第三版历史合成演示](examples/studies_demo_v3/README.md)。复用现有多SAS、SuStaIn与精确ID配置；Python 3.11、Conda兼容。新结果写入 `outputs/real/studies/`。旧五项研究文档、示例及Hcy历史结果保留，以下内容是历史方案说明。
 
 ---
 

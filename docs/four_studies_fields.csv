@@ -53,12 +53,10 @@ MH_LL_STT,prior_statin,category,0;1,category
 A_SBP,sbp0,continuous,,mmHg
 F3_MRS,mrs3,score,0;1;2;3;4;5,score
 D_MRS,discharge_mrs,score,0;1;2;3;4;5,score
-IMG_ICAS,icas,category,1;2,category
 CEC,cec,continuous,,%
 BSL_HDL,hdl,continuous,,mmol/L
 BSL_LDL,ldl,continuous,,mmol/L
 BSL_TG,tg,continuous,,mmol/L
-Apo_AI,apo_ai,continuous,,g/L
 BSL_UACR,uacr0,continuous,,mg/mmol
 M03_UACR,uacr3,continuous,,mg/mmol
 M03_CYSC,cysc3,continuous,,mg/L

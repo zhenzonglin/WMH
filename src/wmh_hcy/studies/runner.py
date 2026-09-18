@@ -32,7 +32,7 @@ def study_sources(study):
                      "death3_date", "death6_date", "death12_date", "is_event", "is_day", "heart_disease_gate", "chd_type_present"}
         selected |= {f"y{y}_is_{suffix}" for y in (2, 3, 4, 5) for suffix in ("event", "day")}
     elif study == "cec":
-        selected |= {"apo_ai", "prior_lipid_med", "onset_date", "sample_date", "pre_mrs", "nihss", "toast"}
+        selected |= {"prior_lipid_med", "onset_date", "sample_date", "pre_mrs", "nihss", "toast"}
     elif study == "kidney":
         selected |= {"uacr0", "uacr3", "cysc", "sbp0", "discharge_bp_med", "discharge_acei", "discharge_arb", "nihss", "toast"}
     if study in {"bp", "kidney"}:

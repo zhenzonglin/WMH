@@ -10,12 +10,10 @@ import pandas as pd
 from ..common import DataError, read_json, resolve, sha256, unique_ids
 from .registry import FOLDERS
 
-FOCUS = {"bp": ("IMG_ICAS", "H_CHD", "H_HD", "H_CHD_TP", "BSL_CYSC"),
-         "cec": ("CEC", "Apo_AI"), "kidney": ("M03_CYSC",)}
-PATTERNS = {"ICAS": r"icas|颅内.*(?:狭窄|动脉)|intracranial",
-            "CHD": r"chd|^h_hd$|冠心病|冠状动脉|coronary",
-            "CEC": r"(?:^|_)cec(?:$|_)|efflux|外排|胆固醇流出",
-            "APO_AI": r"apo[_ -]?a[i1]|apolipoprotein.*a|载脂蛋白.*[Aa]"}
+FOCUS = {"bp": ("H_CHD", "H_HD", "H_CHD_TP", "BSL_CYSC"),
+         "cec": ("CEC",), "kidney": ("M03_CYSC",)}
+PATTERNS = {"CHD": r"chd|^h_hd$|冠心病|冠状动脉|coronary",
+            "CEC": r"(?:^|_)cec(?:$|_)|efflux|外排|胆固醇流出"}
 
 
 def saved_runs(cfg):
@@ -133,10 +131,10 @@ def value_page(runs):
         root = runs["bp"]
         lines.append(f"bp run={root.name}")
         try:
-            raw = raw_columns(root, ["H_CHD", "IMG_ICAS"])
+            raw = raw_columns(root, ["H_CHD"])
             eligible = pd.read_csv(root / "eligible.csv", usecols=["patient_id"], dtype=str)
             selected = raw.loc[raw.code_n.isin(eligible.patient_id)]
-            for source, codes in (("H_CHD", [0, 1]), ("IMG_ICAS", [1, 2, 3])):
+            for source, codes in (("H_CHD", [0, 1]),):
                 if source not in raw:
                     lines.append(f"  {source}: ABSENT_COLUMN")
                     continue
@@ -154,7 +152,7 @@ def value_page(runs):
                 lines.append("  Rules: H_HD=1 => CHD=0; nonmissing H_CHD_TP => CHD=1; contradictory evidence blocks fitting.")
             else:
                 lines.append("  No current CHD rule audit: rerun audit after updating sources/code.")
-            lines.append("  Blanks without either rule remain missing; IMG_ICAS code3 remains unknown.")
+            lines.append("  CHD blanks without either rule remain missing.")
         except (DataError, OSError, ValueError) as exc:
             lines.append(f"  BP value check unavailable: {type(exc).__name__} (check local saved inputs)")
     if "cec" in runs:

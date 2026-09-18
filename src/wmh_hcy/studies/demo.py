@@ -52,7 +52,7 @@ def synthetic_tables(n=1200, seed=20260917, missing=True):
                    education=rng.choice(range(1, 6), n), bmi=rng.normal(24, 3, n),
                    cysc=np.exp(rng.normal(0, .2, n)), cysc3=np.exp(rng.normal(0, .2, n)),
                    ldl=np.exp(rng.normal(1, .2, n)), hdl=np.exp(rng.normal(.2, .2, n)),
-                   tg=np.exp(rng.normal(.4, .4, n)), apo_ai=rng.normal(1.3, .15, n),
+                   tg=np.exp(rng.normal(.4, .4, n)),
                    cec=cec, uacr0=u0, uacr3=u3, hospital_death=np.full(n, 2), sbp0=sbp3+rng.normal(10, 10, n),
                    prior_statin=rng.binomial(1, .3, n), prior_lipid_med=np.full(n, 2),
                    discharge_bp_med=np.full(n, 2))

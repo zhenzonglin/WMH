@@ -29,12 +29,10 @@ SOURCES.update({
     "A_SBP": ("sbp0", "continuous", None),
     "F3_MRS": ("mrs3", "score", list(range(6))),
     "D_MRS": ("discharge_mrs", "score", list(range(6))),
-    "IMG_ICAS": ("icas", "category", [1, 2]),
     "CEC": ("cec", "continuous", None),
     "BSL_HDL": ("hdl", "continuous", None),
     "BSL_LDL": ("ldl", "continuous", None),
     "BSL_TG": ("tg", "continuous", None),
-    "Apo_AI": ("apo_ai", "continuous", None),
     "BSL_UACR": ("uacr0", "continuous", None),
     "M03_UACR": ("uacr3", "continuous", None),
     "M03_CYSC": ("cysc3", "continuous", None),
@@ -51,16 +49,16 @@ CATEGORIES = {alias: codes for alias, kind, codes in SOURCES.values()
               if kind == "category" or alias in {"pre_mrs", "mrs3"}}
 CATEGORIES.update(pre_mrs=list(range(6)), mrs3=list(range(6)), mrs12=list(range(7)),
                   raas=[0, 1], albuminuria=[0, 1, 2, 3])
-UNKNOWN = {"H_HYPT": [98], "H_DIAB": [98], "H_STROKE": [98], "EDUC": [98], "IMG_ICAS": [3]}
+UNKNOWN = {"H_HYPT": [98], "H_DIAB": [98], "H_STROKE": [98], "EDUC": [98]}
 UNITS = {"cec": "%", "uacr0": "mg/mmol", "uacr3": "mg/mmol", "cysc": "mg/L", "cysc3": "mg/L",
-         "ldl": "mmol/L", "hdl": "mmol/L", "tg": "mmol/L", "apo_ai": "g/L",
+         "ldl": "mmol/L", "hdl": "mmol/L", "tg": "mmol/L",
          "sbp0": "mmHg", "lsbp3": "mmHg", "rsbp3": "mmHg", "bmi": "kg/m2"}
 COMMON = ("age", "sex", "smoking", "drinking", "hypertension", "diabetes", "prior_stroke")
 METABOLIC = COMMON + ("bmi", "education", "cysc", "ldl", "tg", "prior_statin",
                       "sample_day", "lesion_ml", "icv_ml")
 COVARIATES = {
     "recovery": COMMON + ("education", "pre_mrs", "nihss", "toast", "lesion_ml", "mrs3", "icv_ml"),
-    "bp": COMMON + ("bmi", "cysc", "sbp0", "chd", "toast", "icas", "prior_bp_med",
+    "bp": COMMON + ("bmi", "cysc", "sbp0", "chd", "toast", "prior_bp_med",
                     "discharge_bp_med", "mrs3", "icv_ml"),
     "cec": METABOLIC + ("hdl",),
     "kidney": COMMON + ("bmi", "education", "cysc3", "sbp3", "raas", "mrs3", "icv_ml"),
@@ -128,7 +126,7 @@ def roles(study: str) -> list[dict]:
         "pre_mrs": "控制卒中前功能状态", "nihss": "给定入院卒中严重程度", "toast": "给定卒中病因构成",
         "mrs3": "给定恢复期功能状态，是条件预后问题而非总效应混杂因素",
         "sbp0": "控制发病入院时血压背景", "sbp3": "恢复期实测血压；研究02为暴露，06为条件调整",
-        "chd": "既往冠心病可关联血压处置及血管结局", "icas": "颅内狭窄关联灌注状态和复发风险",
+        "chd": "既往冠心病可关联血压处置及血管结局",
         "prior_bp_med": "卒中前降压使用属于访视血压前的管理背景", "discharge_bp_med": "出院降压使用先于恢复期血压测量",
         "raas": "出院ACEI或ARB先于恢复期UACR并可能影响其测量", "wmh_ml": "背景白质损伤表型",
         "gm119_ml": "背景灰质结构指标，单次测量不代表萎缩速率",
