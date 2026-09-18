@@ -222,9 +222,9 @@ def build_cohort(master, study, month=3):
 
 
 def cohort_audit(data, study):
-    result = {"eligible_n": len(data), "outcome_observed_n": len(data),
+    result = {"eligible_n": len(data), "outcome_observed_n": len(data), "covariates_assessed": bool(len(data)),
               "covariate_missing": {c: int(data[c].isna().sum()) for c in COVARIATES[study]},
-              "covariates_entirely_missing": [c for c in COVARIATES[study] if data[c].notna().sum() == 0]}
+              "covariates_entirely_missing": [c for c in COVARIATES[study] if len(data) and data[c].notna().sum() == 0]}
     if study == "bp":
         result.update(events=int(data.event_type.sum()),
                       censored=int(data.event_type.eq(0).sum()),

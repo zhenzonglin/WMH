@@ -180,8 +180,11 @@ def print_audit(state):
     keys = ["clinical_n", "exact_id_intersection", "eligible_n", "outcome_observed_n", "independent",
             "dependent", "dead", "unknown", "events", "early_censor", "model_parameters"]
     print(" | ".join(f"{k}={a[k]}" for k in keys if k in a))
-    print("Entirely missing covariates:", ", ".join(a.get("covariates_entirely_missing", [])) or "none")
-    print("Missing counts:", "; ".join(f"{k}:{v}" for k, v in a.get("covariate_missing", {}).items() if v) or "none")
+    if a.get("eligible_n") == 0:
+        print("Covariate missingness: NOT ASSESSED (empty eligible cohort; not evidence of absent source fields)")
+    else:
+        print("Entirely missing covariates:", ", ".join(a.get("covariates_entirely_missing", [])) or "none")
+        print("Missing counts:", "; ".join(f"{k}:{v}" for k, v in a.get("covariate_missing", {}).items() if v) or "none")
     print("Invalid field counts:", a.get("invalid_fields", []))
     if a.get("unit_conflicts"):
         print("Unit conflicts:", a["unit_conflicts"])

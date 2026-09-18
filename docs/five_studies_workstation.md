@@ -70,6 +70,18 @@ wmh-study summary --page 1
 
 ## 第四步 查看或截图反馈
 
+如果审计显示 `REVIEW_REQUIRED`，先使用以下三页只读诊断，无需重复提取SAS或重新拟合：
+
+```bash
+wmh-study diagnose --page 1
+wmh-study diagnose --page 2
+wmh-study diagnose --page 3
+```
+
+第一页区分字段不存在与字段存在但无有效值；第二页在已保存的全部SAS列名和标签中查找ICAS、冠心病、神经酰胺和CEC候选名称；第三页只输出冠心病/ICAS编码计数、恢复期胱抑素C异常类型及其在队列中的人数。候选名称不会自动替换正式变量。三页均不写文件、不改编码、不重新扫描SAS、不拟合模型、不打印ID或个体化验值；CSV输入若在审计后发生改变，第三页拒绝检查该来源。
+
+空的主要队列显示协变量缺失“未评估”，不能据此认为原始年龄等所有字段都不存在。`M03_CYSC`非法值计数来自临床提取表，第三页另列其中进入肾脏分析队列的人数。`H_CHD`空值不会自动填0；需要字典和跳答规则才能判定其含义。详见[2026-09-18审计诊断修订](five_studies_audit_diagnostics_20260918.md)。
+
 ```bash
 wmh-study summary --page 1
 wmh-study summary --page 2

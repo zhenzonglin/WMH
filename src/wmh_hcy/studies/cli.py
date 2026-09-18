@@ -11,15 +11,17 @@ from .registry import STUDIES
 def main():
     parser = argparse.ArgumentParser(description="Five independent CNSR-III imaging studies (Python only)")
     sub = parser.add_subparsers(dest="command", required=True)
-    for command in ("audit", "run", "summary"):
+    for command in ("audit", "run", "summary", "diagnose"):
         p = sub.add_parser(command)
         p.add_argument("--config")
-        if command != "summary":
+        if command not in {"summary", "diagnose"}:
             p.add_argument("--study", choices=["all", *STUDIES], default="all")
         if command == "run":
             p.add_argument("--through", choices=["prepare", "report"], default="prepare")
         if command == "summary":
             p.add_argument("--page", type=int, choices=[1, 2], default=1)
+        if command == "diagnose":
+            p.add_argument("--page", type=int, choices=[1, 2, 3], default=1)
     p = sub.add_parser("demo")
     p.add_argument("--output", default="outputs/synthetic/studies_demo")
     p.add_argument("--n", type=int, default=1200)
@@ -36,7 +38,10 @@ def main():
             summary(cfg)
         else:
             cfg = load_workstation(args.config, "wmh-study")
-            if args.command == "summary":
+            if args.command == "diagnose":
+                from .diagnostics import diagnose
+                print("\n".join(diagnose(cfg, args.page)))
+            elif args.command == "summary":
                 summary(cfg, args.page)
             else:
                 studies = STUDIES if args.study == "all" else [args.study]
