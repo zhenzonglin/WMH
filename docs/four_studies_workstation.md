@@ -25,6 +25,15 @@ conda env create -f environment.yml
 conda activate wmh-hcy
 ```
 
+若使用精简代码目录 `WMH-code-v3`，在该目录更新代码，再回到原 `WMH` 目录读取本地配置：
+
+```bash
+git -C /data/usersdir/linzhenzong/WMH-code-v3 pull --ff-only
+cd /data/usersdir/linzhenzong/WMH
+```
+
+适用于已从 `WMH-code-v3` 执行过 `pip install --no-deps -e .` 的环境。纯Python代码修订无需重新安装依赖。不要在精简代码目录运行真实审计，否则不会读取原目录的 `config/workstation.local.yml`。首次精简克隆的旧Git兼容方式为 `clone --no-checkout --depth 1 --filter=blob:none` 后，在新目录依次执行 `sparse-checkout init --cone`、`sparse-checkout set src config scripts`、`checkout main`；避免在旧Git中直接使用 `clone --sparse`。
+
 默认复用 `config/workstation.local.yml`。没有本地配置时，先用既有配置入口指定实际目录：
 
 ```bash
@@ -76,9 +85,11 @@ wmh-study diagnose --page 2
 wmh-study diagnose --page 3
 ```
 
-第一页区分字段不存在与字段存在但无有效值；第二页在已保存的全部SAS列名和标签中查找ICAS、冠心病、CEC和Apo_AI候选名称；第三页只输出冠心病/ICAS编码计数、恢复期胱抑素C异常类型及其在队列中的人数。候选名称不会自动替换正式变量。三页均不写文件、不改编码、不重新扫描SAS、不拟合模型、不打印ID或个体化验值；CSV输入若在审计后发生改变，第三页拒绝检查该来源。
+第一页区分字段不存在与字段存在但无有效值；第二页在已保存的全部SAS列名和标签中查找ICAS、冠心病、CEC和Apo_AI候选名称；第三页只输出冠心病/ICAS编码计数、CEC及恢复期胱抑素C异常类型及其在队列中的人数。候选名称不会自动替换正式变量。三页均不写文件、不改编码、不重新扫描SAS、不拟合模型、不打印ID或个体化验值；CSV输入若在审计后发生改变，第三页拒绝检查该来源。
 
 空的主要队列显示协变量缺失“未评估”，不能据此认为原始年龄等所有字段都不存在。`M03_CYSC`非法值计数来自临床提取表，第三页另列其中进入肾脏分析队列的人数。`H_CHD`仅依据本次已确认规则补齐：H_HD=1补0，H_CHD_TP非空补1。冲突单列，其他缺失不当作0。原始值和推导值均保留；第3页列出规则补齐及冲突计数。
+
+异常审计同时保存全部提取记录与本研究入组队列的计数，后者为 `field_audit.csv` 的 `invalid_eligible`。本次修复限定为肾脏研究的 `M03_CYSC`：只有入组队列中的异常值阻断，已按既定规则排除者的异常不阻断；该队列包含五年状态尚未知的入组者。这个恢复期指标不用于更大的基线结构子研究。其他字段保留原有核查范围，避免遗漏血压研究独立12个月队列等人群中的异常。CEC负值、非有限值或不可解析值仍要求确认检测/编码，零值沿用现有规则允许。不会自动改变阈值、将异常值插补或丢弃全部异常记录。旧审计没有队列内计数时，需重跑对应研究的 `audit`，只读诊断本身不改变状态。
 
 ```bash
 wmh-study summary --page 1

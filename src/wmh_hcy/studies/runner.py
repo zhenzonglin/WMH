@@ -111,7 +111,8 @@ def prepare(cfg, study):
             if issues:
                 raise DataError("Conflicting variable owners; see source_issues.json and set variable_sources")
             extract(local, fields=fields)
-        clinical, fields_audit = read_clinical(local)
+        invalid_masks = {}
+        clinical, fields_audit = read_clinical(local, invalid_masks=invalid_masks)
         fields_audit = fields_audit.loc[fields_audit.source.isin(fields)].copy()
         unit_issues = explicit_unit_conflicts(inv, owner, fields)
         fields_audit["file"] = fields_audit.source.map(owner).fillna("")
@@ -121,6 +122,10 @@ def prepare(cfg, study):
         master = derive(clinical.merge(images, on="patient_id", how="left", validate="one_to_one"))
         master.to_csv(folder / "master.csv", index=False)
         data, exclusions, flow = build_cohort(master, study)
+        selected = clinical.patient_id.isin(data.patient_id)
+        fields_audit["invalid_eligible"] = fields_audit.source.map(
+            {s: int((mask & selected).sum()) for s, mask in invalid_masks.items()})
+        fields_audit.to_csv(folder / "field_audit.csv", index=False)
         data.to_csv(folder / "eligible.csv", index=False)
         exclusions.to_csv(folder / "exclusions.csv", index=False)
         flow.to_csv(folder / "cohort_flow.csv", index=False)
@@ -130,6 +135,8 @@ def prepare(cfg, study):
                      exact_id_intersection=int(clinical.patient_id.isin(images.patient_id).sum()),
                      fields_absent=fields_audit.loc[~fields_audit.present, "source"].tolist(),
                      invalid_fields=fields_audit.loc[fields_audit.invalid.gt(0), ["source", "invalid"]].to_dict("records"),
+                     invalid_fields_eligible=fields_audit.loc[fields_audit.invalid_eligible.gt(0),
+                                                            ["source", "invalid_eligible"]].to_dict("records"),
                      medication_conflicts=int(master.medication_conflict.sum()),
                      bp3_conflicts=int(master.bp3_conflict.sum()),
                      state60_conflicts=int(master.state60_conflict.sum()),
@@ -148,8 +155,17 @@ def prepare(cfg, study):
             columns = ["patient_id", "chd_recorded", "heart_disease_gate", "chd_type_present", "chd", "chd_origin"]
             master.loc[master.chd_rule_conflict, columns].to_csv(folder / "chd_conflicts.csv", index=False)
         primary_aliases = set(primary_spec(study).predictors)
-        invalid_covariates = fields_audit.loc[fields_audit.canonical.isin(primary_aliases) & fields_audit.invalid.gt(0), "source"].tolist()
+        review_counts = fields_audit.invalid.copy()
+        # Month3 CYSC is used only within the kidney landmark cohort and its subsets,
+        # never in the larger baseline structural analysis. Retain other review gates:
+        # BP has an independent month12 cohort and invalid exposures can cause exclusion.
+        if study == "kidney":
+            month3_cysc = fields_audit.source.eq("M03_CYSC")
+            review_counts.loc[month3_cysc] = fields_audit.loc[month3_cysc, "invalid_eligible"]
+        invalid_covariates = fields_audit.loc[
+            fields_audit.canonical.isin(primary_aliases) & review_counts.gt(0), "source"].tolist()
         audit["invalid_primary_covariates_require_review"] = invalid_covariates
+        audit["invalid_review_scope"] = "M03_CYSC: kidney eligible cohort; other primary fields: all extracted"
         try:
             design = StudyDesign.freeze(data, primary_spec(study))
             filled = data[list(design.spec.predictors)].copy()

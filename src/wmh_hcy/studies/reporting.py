@@ -184,7 +184,10 @@ def print_audit(state):
     else:
         print("Entirely missing covariates:", ", ".join(a.get("covariates_entirely_missing", [])) or "none")
         print("Missing counts:", "; ".join(f"{k}:{v}" for k, v in a.get("covariate_missing", {}).items() if v) or "none")
-    print("Invalid field counts:", a.get("invalid_fields", []))
+    print("Invalid field counts (all extracted):", a.get("invalid_fields", []))
+    if "invalid_fields_eligible" in a:
+        print("Invalid field counts (eligible):", a["invalid_fields_eligible"])
+        print("Invalid primary fields requiring review:", a.get("invalid_primary_covariates_require_review", []))
     if a.get("chd_rules"):
         print("CHD skip-rule audit (eligible):", a["chd_rules"]["eligible"])
         if a["chd_rules"]["eligible"].get("conflicts"):

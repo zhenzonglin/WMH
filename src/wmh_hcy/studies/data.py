@@ -57,7 +57,8 @@ def chd_rule_summary(data):
             "final_missing": int(final.isna().sum())}
 
 
-def read_clinical(cfg):
+def read_clinical(cfg, *, invalid_masks=None):
+    """Optionally retain source-invalid masks on the returned clinical row index."""
     supplied = cfg["inputs"].get("clinical_csv")
     path = resolve(cfg, supplied) if supplied else outdir(cfg) / "extracted/clinical_raw.csv"
     if not path.is_file():
@@ -75,6 +76,7 @@ def read_clinical(cfg):
     for source, (name, kind, codes) in SOURCES.items():
         present = source in raw
         bad = 0
+        invalid = pd.Series(False, index=raw.index)
         issue = ""
         if not present:
             value = pd.Series(pd.NaT if kind in {"date", "datetime"} else np.nan, index=raw.index)
@@ -89,7 +91,8 @@ def read_clinical(cfg):
             except DataError as exc:
                 # Isolate a date error to studies needing this field; never guess its unit.
                 value = pd.Series(pd.NaT, index=raw.index)
-                bad = int(raw[source].ne("").sum())
+                invalid = raw[source].ne("")
+                bad = int(invalid.sum())
                 issue = str(exc)
         else:
             text = raw[source].astype("string").str.strip()
@@ -114,6 +117,8 @@ def read_clinical(cfg):
             bad = int(invalid.sum())
             value = value.mask(invalid | known_unknown)
         columns[name] = value
+        if invalid_masks is not None:
+            invalid_masks[source] = invalid.copy()
         audits.append({"source": source, "canonical": name, "present": present,
                        "observed": int(value.notna().sum()), "invalid": bad,
                        "unit": UNITS.get(name, "dictionary"), "patients": len(raw), "issue": issue})

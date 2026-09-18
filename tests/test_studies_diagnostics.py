@@ -38,18 +38,21 @@ def test_saved_metadata_candidates_do_not_map_names(tmp_path):
     assert sha256(tmp_path/'source_inventory.json') == before
 
 
-def test_numeric_reason_counts_agree_with_preparation(tmp_path):
+@pytest.mark.parametrize('source, expected', [('M03_CYSC', 5), ('CEC', 4)])
+def test_numeric_reason_counts_agree_with_preparation(tmp_path, source, expected):
     cfg = make_demo(tmp_path/'demo', n=80)
-    source = cfg['inputs']['clinical_csv']
-    raw = pd.read_csv(source, dtype=str, keep_default_na=False)
+    path = cfg['inputs']['clinical_csv']
+    raw = pd.read_csv(path, dtype=str, keep_default_na=False)
     values = ['', '.', '.A', 'A', '_', '.Z', '0', '-5', 'inf', '-inf', 'broken', '1.1']
-    raw['M03_CYSC'] = '1'
-    raw.loc[:len(values)-1, 'M03_CYSC'] = values
-    raw.to_csv(source, index=False)
+    raw[source] = '1'
+    raw.loc[:len(values)-1, source] = values
+    raw.to_csv(path, index=False)
     _, fields = read_clinical(cfg)
-    _, parts = numeric_parts(raw.M03_CYSC)
-    bad = parts['zero'] | parts['negative'] | parts['nonfinite'] | parts['unparseable']
-    assert int(bad.sum()) == int(fields.set_index('source').loc['M03_CYSC', 'invalid']) == 5
+    _, parts = numeric_parts(raw[source])
+    bad = parts['negative'] | parts['nonfinite'] | parts['unparseable']
+    if source == 'M03_CYSC':
+        bad |= parts['zero']
+    assert int(bad.sum()) == int(fields.set_index('source').loc[source, 'invalid']) == expected
     assert parts['sas_or_blank_missing'].sum() == 6
     assert sum(int(v.sum()) for v in parts.values()) == len(raw)
 
@@ -68,6 +71,7 @@ def test_all_three_pages_are_readonly_and_never_show_ids(tmp_path):
     assert source.code_n.iloc[0] not in text
     assert 'M03_CYSC all_extracted:' in text and 'H_CHD eligible N=' in text
     assert 'CEC: PRESENT' in text
+    assert 'CEC all_extracted:' in text and 'CEC eligible:' in text
     assert 'No saved SAS inventory' in text
     # Exact source absence is distinct from zero coverage.
     path = Path(states['cec']['path'])/'field_audit.csv'
@@ -93,3 +97,51 @@ def test_external_csv_change_and_no_saved_audit_are_explicit(tmp_path):
     with pytest.raises(DataError):
         diagnose(changed)
     assert not (tmp_path/'missing_outputs'/FOLDERS['kidney']).exists()
+
+
+@pytest.mark.parametrize('in_cohort', [False, True])
+def test_invalid_month3_cysc_only_blocks_its_kidney_cohort(tmp_path, in_cohort):
+    cfg = make_demo(tmp_path/'demo', n=150)
+    source = cfg['inputs']['clinical_csv']
+    raw = pd.read_csv(source, dtype=str, keep_default_na=False)
+    raw['M03_CYSC'] = raw.M03_CYSC.replace('', '1.1')
+    raw.loc[0, ['M03_CYSC', 'D_DIAG', 'F3_MRS', 'F3_DEATH', 'BSL_UACR', 'M03_UACR']] = [
+        '0', '1' if in_cohort else '2', '1', '2', '1', '1']
+    # Missing final outcome still belongs to the starting cohort and must not bypass review.
+    raw.loc[0, 'm60_mrs'] = ''
+    for column in ('D_DEATH', 'F6_DEATH', 'F12_DEATH', 'F2Y_DEATH', 'F3Y_DEATH', 'F4Y_DEATH', 'F5Y_DEATH'):
+        raw.loc[0, column] = '2'
+    for column in ('F12_MRS', 'm24_mrs', 'm36_mrs', 'm48_mrs'):
+        raw.loc[0, column] = '1'
+    raw.to_csv(source, index=False)
+    before = sha256(Path(source))
+    state = prepare(cfg, 'kidney')
+    assert sha256(Path(source)) == before
+    assert state['status'] == ('REVIEW_REQUIRED' if in_cohort else 'PREPARED')
+    audit = state['audit']
+    assert audit['invalid_fields'] == [{'source': 'M03_CYSC', 'invalid': 1}]
+    assert audit['invalid_primary_covariates_require_review'] == (['M03_CYSC'] if in_cohort else [])
+    fields = pd.read_csv(Path(state['path'])/'field_audit.csv').set_index('source')
+    assert fields.loc['M03_CYSC', 'invalid_eligible'] == int(in_cohort)
+    eligible = pd.read_csv(Path(state['path'])/'eligible.csv', dtype={'patient_id': str})
+    row = eligible.loc[eligible.patient_id.eq(raw.loc[0, 'code_n'])]
+    assert len(row) == int(in_cohort)
+    if in_cohort:
+        assert row.state60.isna().all() and row.cysc3.isna().all()
+
+
+def test_invalid_cec_exposure_remains_reviewable_after_exclusion(tmp_path):
+    cfg = make_demo(tmp_path/'demo', n=150)
+    source = cfg['inputs']['clinical_csv']
+    raw = pd.read_csv(source, dtype=str, keep_default_na=False)
+    raw['CEC'] = raw.CEC.replace('', '12')
+    raw.loc[:3, 'CEC'] = ['-1', 'inf', 'bad', '0']
+    raw.to_csv(source, index=False)
+    state = prepare(cfg, 'cec')
+    assert state['status'] == 'REVIEW_REQUIRED'
+    assert state['audit']['invalid_primary_covariates_require_review'] == ['CEC']
+    assert state['audit']['invalid_fields_eligible'] == []
+    lines = '\n'.join(diagnose(cfg, 3))
+    assert 'unparseable=1; nonfinite=1; zero=1; negative=1; positive=146' in lines
+    assert 'CEC zero is allowed' in lines
+    assert raw.code_n.iloc[0] not in lines

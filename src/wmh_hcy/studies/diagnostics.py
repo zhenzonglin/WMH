@@ -49,7 +49,8 @@ def field_page(runs):
             present = str(r.present).lower() == "true"
             flag = "ABSENT_COLUMN" if not present else "PRESENT_NO_VALID_VALUES" if int(r.observed) == 0 else "PRESENT"
             file = Path(str(r.get("file", ""))).name if r.get("file", "") else "-"
-            lines.append(f"  {source}: {flag}; valid={r.observed}/{r.patients}; invalid={r.invalid}; file={file}")
+            scoped = f"; invalid_eligible={r.invalid_eligible}" if "invalid_eligible" in fields else ""
+            lines.append(f"  {source}: {flag}; valid={r.observed}/{r.patients}; invalid={r.invalid}{scoped}; file={file}")
         if a.get("eligible_n") == 0:
             lines.append("  Covariate missingness NOT ASSESSED: empty cohort does not mean all source covariates are missing.")
     lines.append("ABSENT_COLUMN means absent from this extraction; candidate metadata names are on page 2.")
@@ -156,6 +157,21 @@ def value_page(runs):
             lines.append("  Blanks without either rule remain missing; IMG_ICAS code3 remains unknown.")
         except (DataError, OSError, ValueError) as exc:
             lines.append(f"  BP value check unavailable: {type(exc).__name__} (check local saved inputs)")
+    if "cec" in runs:
+        root = runs["cec"]
+        lines.append(f"cec run={root.name}")
+        try:
+            raw = raw_columns(root, ["CEC"])
+            if "CEC" not in raw:
+                raise DataError("CEC absent")
+            eligible = pd.read_csv(root / "eligible.csv", usecols=["patient_id"], dtype=str)
+            for scope, d in (("all_extracted", raw), ("eligible", raw.loc[raw.code_n.isin(eligible.patient_id)])):
+                _, parts = numeric_parts(d.CEC)
+                lines.append(f"  CEC {scope}: " + "; ".join(f"{k}={int(v.sum())}" for k, v in parts.items()))
+            lines.append("  CEC zero is allowed; negative/nonfinite/unparseable values require assay/coding review, not imputation.")
+            lines.append("  CEC unit contract is percent; names alone do not confirm units or baseline sampling.")
+        except (DataError, OSError, ValueError) as exc:
+            lines.append(f"  CEC value check unavailable: {type(exc).__name__} (check local saved inputs)")
     if "kidney" in runs:
         root = runs["kidney"]
         lines.append(f"kidney run={root.name}")
