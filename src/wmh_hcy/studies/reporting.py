@@ -93,14 +93,13 @@ def report(folder, state, results):
         plt.close(fig)
     elif (primary / "coefficients.csv").is_file():
         d = pd.read_csv(primary / "coefficients.csv")
-        target = "cer_ratio" if state["study"] == "ceramide" else "cec"
+        target = "cec"
         d = d.loc[d.term.eq(target)]
         if len(d):
             fig, ax = plt.subplots(figsize=(7, 3))
             ax.errorbar(d.estimate.to_numpy(), [0], xerr=[(d.estimate-d.lower).to_numpy(), (d.upper-d.estimate).to_numpy()], fmt="o", capsize=4)
             ax.axvline(0, color="gray", linestyle="--")
-            ax.set(yticks=[0], yticklabels=[target], xlabel="Adjusted difference and 95% CI\n" +
-                   ("log(1 + WMH mL), per doubling of C16/C24" if target == "cer_ratio" else "GM119 mL, per 1 SD CEC"))
+            ax.set(yticks=[0], yticklabels=[target], xlabel="Adjusted difference and 95% CI\nGM119 mL, per 1 SD CEC")
             ax.set_title(figure_label)
             figure = "primary_result.png"
             fig.tight_layout()
@@ -108,7 +107,7 @@ def report(folder, state, results):
             plt.close(fig)
     mode = "SYNTHETIC DEMONSTRATION — NOT PATIENT RESULTS" if state["mode"] == "synthetic" else "OBSERVATIONAL ANALYSIS"
     sections = [f"<h1>{TITLES[state['study']]}</h1><p><strong>{mode}</strong></p>",
-                "<p>五项独立队列；不要求Hcy。患者行和ID仅保存在本地分析目录，不进入本报告。</p>",
+                "<p>四项独立队列；不要求Hcy。患者行和ID仅保存在本地分析目录，不进入本报告。</p>",
                 "<h2>病例流程</h2>", table(pd.read_csv(folder / "cohort_flow.csv")),
                 "<h2>预设检验</h2>", table(results),
                 "<p>多分类系数取指数表示 P(该状态)/P(独立) 的比值之比，不能标为HR。联合检验显著不代表每个系数都显著。</p>"]
@@ -117,7 +116,7 @@ def report(folder, state, results):
     if state["study"] == "bp":
         sections.append("<p>SBP始终连续建模；主图展示样条关联。140 mmHg仅为参照，固定点对比是补充表。阴影为逐点区间。</p>")
     if state["study"] == "kidney":
-        sections.append("<p>v2主要检验：依赖方程中持续白蛋白尿×标准化WMH，1自由度。三个类别交互的整体检验为次要。"
+        sections.append("<p>主要检验：依赖方程中持续白蛋白尿×标准化WMH，1自由度。三个类别交互的整体检验为次要。"
                         "模型含四类UACR、WMH及三个交互，在依赖和死亡方程中均估计。主要比值表示两组WMH斜率的相对概率比之比。"
                         "绝对概率差是补充展示；两种尺度不要求得到相同交互结论。</p>")
     if (folder / "cec_hdl_comparison.csv").is_file():
@@ -132,7 +131,7 @@ def report(folder, state, results):
         sections.extend(["<h2>诊断摘要</h2>", (f"<p>完成模型 {len(diag)}；参数数 {diag[0]['parameters']}；"
                          f"最大设计条件数 {max(d['design_condition'] for d in diag):.3g}。完整诊断见 fit_diagnostics.json。</p>")])
     sections.append("<p>缺失处理依赖MAR假设。功能状态图为固定访视结局的标准化概率，不是首次失能的累积发生率。"
-                    "血压分析是实测血压的条件关联。次要分析报告研究内BH-FDR；总汇报另列固定五项Holm校正。</p>")
+                    "血压分析是实测血压的条件关联。次要分析报告研究内BH-FDR；总汇报另列本版固定四项Holm校正。</p>")
     write_html(folder / "report.html", "".join(sections))
 
 
@@ -152,16 +151,16 @@ def summary(cfg, page=1):
     path.mkdir(parents=True, exist_ok=True)
     rows.to_csv(path / "summary.csv", index=False)
     links = "".join(f'<li>{html.escape(s)}: <a href="{Path(p).as_posix()}/report.html">报告</a></li>'
-                    for s, p in zip(rows.study, rows.get("path", pd.Series([""]*5)), strict=True) if isinstance(p, str) and p)
-    write_html(path / "summary.html", f"<h1>五项独立研究汇总</h1><p>mode={cfg['mode']}；未估计项不当作阴性结果。</p>"
+                    for s, p in zip(rows.study, rows.get("path", pd.Series([""]*len(STUDIES))), strict=True) if isinstance(p, str) and p)
+    write_html(path / "summary.html", f"<h1>四项独立研究汇总</h1><p>mode={cfg['mode']}；未估计项不当作阴性结果。</p>"
                +table(rows)+"<ul>"+links+"</ul>")
     print(f"CNSR-III STUDIES | mode={cfg['mode']} | page={page}")
     from . import CONTRACT
     print(f"Contract={CONTRACT}; PREVIOUS_VERSION results are retained but excluded from current Holm pooling.")
     if page == 1:
-        keep = [c for c in ["study", "status", "n", "parameters", "df1", "p", "p_holm_five"] if c in rows]
+        keep = [c for c in ["study", "status", "n", "parameters", "df1", "p", "p_holm_four"] if c in rows]
         print(rows[keep].to_string(index=False))
-        print("Holm family fixed at five primary tests; missing tests not reported as p=1.")
+        print("Current Holm family fixed at four primary tests; missing tests not reported as p=1.")
     else:
         for study in STUDIES:
             pointer = read_json(study_root(cfg, study) / "latest_prepared.json")
@@ -186,6 +185,10 @@ def print_audit(state):
         print("Entirely missing covariates:", ", ".join(a.get("covariates_entirely_missing", [])) or "none")
         print("Missing counts:", "; ".join(f"{k}:{v}" for k, v in a.get("covariate_missing", {}).items() if v) or "none")
     print("Invalid field counts:", a.get("invalid_fields", []))
+    if a.get("chd_rules"):
+        print("CHD skip-rule audit (eligible):", a["chd_rules"]["eligible"])
+        if a["chd_rules"]["eligible"].get("conflicts"):
+            print("CHD rule conflict blocks BP fitting; local patient details: chd_conflicts.csv")
     if a.get("unit_conflicts"):
         print("Unit conflicts:", a["unit_conflicts"])
     print("Exclusions:", "; ".join(f"{k}:{v}" for k, v in a.get("flow_excluded", {}).items()) or "none")

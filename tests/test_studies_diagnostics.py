@@ -27,12 +27,12 @@ def test_empty_cohort_is_not_evidence_all_covariates_absent(capsys):
 def test_saved_metadata_candidates_do_not_map_names(tmp_path):
     dump_json(tmp_path/'source_inventory.json', [{
         'path': '/private/chemistry.sas7bdat', 'mtime_ns': 1, 'bytes': 500,
-        'columns': ['other_name', 'CEC', 'BSL_Cer16_0'],
+        'columns': ['other_name', 'CEC', 'Apo_AI'],
         'labels': {'other_name': 'intracranial stenosis'},
     }])
     before = sha256(tmp_path/'source_inventory.json')
     text = '\n'.join(candidate_page({'cec': tmp_path}))
-    assert 'CEC: candidates=1' in text and 'CERAMIDE: candidates=1' in text
+    assert 'CEC: candidates=1' in text and 'APO_AI: candidates=1' in text
     assert 'ICAS: candidates=1' in text and 'other_name' in text
     assert 'NOT mapped' in text and '/private/' not in text
     assert sha256(tmp_path/'source_inventory.json') == before
@@ -57,7 +57,7 @@ def test_numeric_reason_counts_agree_with_preparation(tmp_path):
 def test_all_three_pages_are_readonly_and_never_show_ids(tmp_path):
     cfg = make_demo(tmp_path/'demo', n=150)
     states = {}
-    for study in ('bp', 'kidney', 'cec', 'ceramide'):
+    for study in ('bp', 'kidney', 'cec'):
         states[study] = prepare(cfg, study)
     # Use audited source hashes for the CSV path; no new SAS scan is required.
     before = {str(p): sha256(p) for p in tmp_path.rglob('*') if p.is_file()}

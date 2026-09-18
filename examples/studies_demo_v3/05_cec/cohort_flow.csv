@@ -1,0 +1,8 @@
+step,remaining,excluded_here
+clinical_image_union,2400,0
+adult_ischemic_stroke,2400,0
+available_true_icv,2400,0
+available_gm119_ml,2400,0
+available_lesion_ml,2400,0
+observed_baseline_cec,2280,120
+known_baseline_sample_time,2280,0

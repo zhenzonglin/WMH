@@ -86,6 +86,8 @@ def run_one(data, spec, directory, settings, inherited=None, complete_case=False
     result = {"analysis": spec.name, "study": spec.study, "tier": spec.tier, "family": spec.family, "status": "NOT_ESTIMABLE"}
     try:
         working = data.copy()
+        if spec.study == "bp" and "chd_rule_conflict" in working and working.chd_rule_conflict.any():
+            raise DataError("Conflicting H_CHD / H_HD / H_CHD_TP records require review before fitting or imputation")
         # Eligibility never comes from imputation of exposures or imaging.
         needed = list(spec.exposures)
         needed += [c for c in spec.covariates if c.endswith("_ml")]
@@ -217,23 +219,10 @@ def run_study(data, master, study, directory, settings):
         mean = data.copy()
         mean["sbp3"] = mean.sbp3_mean
         run(mean, primary.variant("mean_arms"), inherited=frozen)
-        run(data.loc[data.severe_wmh.eq(1)], primary.variant("severe_wmh"), inherited=frozen)
         landmark, _, _ = build_cohort(master, "bp", month=12)
         run(landmark, primary.variant("month12_landmark"), inherited=frozen)
         run(data, primary.variant("time_varying", primary=tuple(t+"_late" for t in primary.primary)),
             inherited=frozen, time_split=True)
-    elif study == "ceramide":
-        run(data, primary.variant("alternative_ratio", exposures=("cer_alt",), primary=("cer_alt",), tier="secondary"), inherited=frozen)
-        gm = data.loc[volume_ok(data, "gm119_ml")]
-        run(gm, primary.variant("gray_matter", outcome="gm119_ml", tier="secondary"), inherited=frozen)
-        run(data, primary.variant("acute_lesion", outcome="log_lesion", tier="secondary",
-                                  covariates=tuple(c for c in primary.covariates if c != "lesion_ml")), inherited=frozen)
-        run(data, primary.variant("separate_components", exposures=("log_c16", "log_c24"),
-                                  primary=("log_c16", "log_c24"), tier="secondary"), inherited=frozen)
-        valid = data.loc[~data.state60_conflict]
-        run(valid, functional_spec(primary, "function60"), inherited=frozen)
-        run(valid, functional_spec(primary, "function60_with_wmh", ("wmh_ml",)), inherited=frozen)
-        run(valid, functional_spec(primary, "function60_observation_weighted").variant("function60_observation_weighted"), inherited=frozen, ipw=True)
     elif study == "cec":
         no_hdl = primary.variant("without_hdl_same_sample", covariates=tuple(c for c in primary.covariates if c != "hdl"))
         if primary_completed:

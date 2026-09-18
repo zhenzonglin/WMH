@@ -18,6 +18,8 @@ SOURCES.update({
     "EDUC": ("education", "category", [1, 2, 3, 4, 5]),
     "BMI": ("bmi", "continuous", None),
     "H_CHD": ("chd", "category", [0, 1]),
+    "H_HD": ("heart_disease_gate", "continuous", None),
+    "H_CHD_TP": ("chd_type_present", "presence", None),
     "MH_HYPT": ("prior_bp_med", "category", [1, 2]),
     "DM_HYPT": ("discharge_bp_med", "category", [1, 2]),
     "DM_HYPT_ACEI": ("discharge_acei", "category", [0, 1]),
@@ -28,12 +30,6 @@ SOURCES.update({
     "F3_MRS": ("mrs3", "score", list(range(6))),
     "D_MRS": ("discharge_mrs", "score", list(range(6))),
     "IMG_ICAS": ("icas", "category", [1, 2]),
-    "IMG_SVD_WMH_Score_PV": ("fazekas_pv", "score", [0, 1, 2, 3]),
-    "IMG_SVD_WMH_Score_Deep": ("fazekas_deep", "score", [0, 1, 2, 3]),
-    "BSL_Cer_16_0": ("cer16", "continuous", None),
-    "BSL_Cer_20_0": ("cer20", "continuous", None),
-    "BSL_Cer_24_0": ("cer24", "continuous", None),
-    "BSL_Cer_24_1": ("cer241", "continuous", None),
     "CEC": ("cec", "continuous", None),
     "BSL_HDL": ("hdl", "continuous", None),
     "BSL_LDL": ("ldl", "continuous", None),
@@ -56,8 +52,7 @@ CATEGORIES = {alias: codes for alias, kind, codes in SOURCES.values()
 CATEGORIES.update(pre_mrs=list(range(6)), mrs3=list(range(6)), mrs12=list(range(7)),
                   raas=[0, 1], albuminuria=[0, 1, 2, 3])
 UNKNOWN = {"H_HYPT": [98], "H_DIAB": [98], "H_STROKE": [98], "EDUC": [98], "IMG_ICAS": [3]}
-UNITS = {"cer16": "pmol/L", "cer20": "pmol/L", "cer24": "pmol/L", "cer241": "pmol/L",
-         "cec": "%", "uacr0": "mg/mmol", "uacr3": "mg/mmol", "cysc": "mg/L", "cysc3": "mg/L",
+UNITS = {"cec": "%", "uacr0": "mg/mmol", "uacr3": "mg/mmol", "cysc": "mg/L", "cysc3": "mg/L",
          "ldl": "mmol/L", "hdl": "mmol/L", "tg": "mmol/L", "apo_ai": "g/L",
          "sbp0": "mmHg", "lsbp3": "mmHg", "rsbp3": "mmHg", "bmi": "kg/m2"}
 COMMON = ("age", "sex", "smoking", "drinking", "hypertension", "diabetes", "prior_stroke")
@@ -67,12 +62,11 @@ COVARIATES = {
     "recovery": COMMON + ("education", "pre_mrs", "nihss", "toast", "lesion_ml", "mrs3", "icv_ml"),
     "bp": COMMON + ("bmi", "cysc", "sbp0", "chd", "toast", "icas", "prior_bp_med",
                     "discharge_bp_med", "mrs3", "icv_ml"),
-    "ceramide": METABOLIC,
     "cec": METABOLIC + ("hdl",),
     "kidney": COMMON + ("bmi", "education", "cysc3", "sbp3", "raas", "mrs3", "icv_ml"),
 }
 TITLES = {"recovery": "01 早期功能独立后的远期失能", "bp": "02 恢复期血压与WMH",
-          "ceramide": "04 神经酰胺与脑损伤表型", "cec": "05 HDL功能与灰质结构",
+          "cec": "05 HDL功能与灰质结构",
           "kidney": "06 脑肾微血管损伤"}
 FOLDERS = {k: v.split()[0] + "_" + k for k, v in TITLES.items()}
 STUDIES = tuple(TITLES)
@@ -112,8 +106,6 @@ def primary_spec(study: str) -> ModelSpec:
                        splines=("age", "sbp3", "wmh_ml"),
                        interactions=(("sbp3", "wmh_ml"), ("sbp3_rcs", "wmh_ml")),
                        primary=("sbp3_x_wmh_ml", "sbp3_rcs_x_wmh_ml"))
-    if study == "ceramide":
-        return replace(spec, family="ols", outcome="log_wmh", exposures=("cer_ratio",), primary=("cer_ratio",))
     if study == "cec":
         return replace(spec, family="ols", outcome="gm119_ml", exposures=("cec",), primary=("cec",))
     return replace(spec, exposures=("wmh_ml", "albuminuria"),
@@ -139,7 +131,7 @@ def roles(study: str) -> list[dict]:
         "chd": "既往冠心病可关联血压处置及血管结局", "icas": "颅内狭窄关联灌注状态和复发风险",
         "prior_bp_med": "卒中前降压使用属于访视血压前的管理背景", "discharge_bp_med": "出院降压使用先于恢复期血压测量",
         "raas": "出院ACEI或ARB先于恢复期UACR并可能影响其测量", "wmh_ml": "背景白质损伤表型",
-        "gm119_ml": "背景灰质结构指标，单次测量不代表萎缩速率", "cer_ratio": "文献预先指定C16:0/C24:0比值",
+        "gm119_ml": "背景灰质结构指标，单次测量不代表萎缩速率",
         "cec": "基线HDL胆固醇外排能力", "albuminuria": "两次实际UACR的四种组合；主要检验持续升高相对两次均低的关联是否随WMH变化",
     }
     for name in primary_spec(study).predictors:
@@ -148,7 +140,8 @@ def roles(study: str) -> list[dict]:
                 else "conditional_prognosis" if name in {"mrs3", "pre_mrs", "nihss", "toast", "lesion_ml"}
                 else "prespecified_background")
         rows.append({"study": study, "variable": name, "role": role,
-                     "source": ";".join(s for s, v in SOURCES.items() if v[0] == name) or "derived_or_imaging",
+                     "source": "H_CHD;H_HD;H_CHD_TP" if name == "chd" else (
+                         ";".join(s for s, v in SOURCES.items() if v[0] == name) or "derived_or_imaging"),
                      "reason": reasons.get(name, "方案预设"),
                      "timing": "month3" if name in {"mrs3", "sbp3", "cysc3", "albuminuria"} else "baseline_or_pre_stroke",
                      "method_basis": "VanderWeele 2019; clinical temporal assumptions; see SAP study-specific references",

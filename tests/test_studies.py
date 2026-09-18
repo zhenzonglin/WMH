@@ -33,7 +33,7 @@ def test_source_separation_and_no_hcy():
     assert not any("HCY" in s.upper() for s in SOURCES)
     for study in STUDIES:
         assert ("CEC" in study_sources(study)) == (study == "cec")
-        assert ("BSL_Cer_16_0" in study_sources(study)) == (study == "ceramide")
+        assert "BSL_Cer_16_0" not in study_sources(study)
         assert ("M03_UACR" in study_sources(study)) == (study == "kidney")
 
 
@@ -88,13 +88,10 @@ def test_bp_landmark_prevents_reverse_time_and_preserves_early_censor(master):
     assert (cohort.exit > cohort.entry).all()
 
 
-def test_uacr_threshold_and_ceramide_direction():
-    d = derive(pd.DataFrame({"uacr0": [2.99, 3, 1, 3, np.nan], "uacr3": [2, 2, 3, 3, 9],
-                             "cer16": [2, 4, 1, 1, 1], "cer24": [1, 2, 0, -1, np.nan]}))
+def test_uacr_threshold():
+    d = derive(pd.DataFrame({"uacr0": [2.99, 3, 1, 3, np.nan], "uacr3": [2, 2, 3, 3, 9]}))
     assert d.albuminuria[:4].tolist() == [0, 1, 2, 3]
     assert np.isnan(d.albuminuria[4])
-    assert_allclose(d.cer_ratio[:2], [1, 1])
-    assert d.cer_ratio[2:].isna().all()
 
 
 def test_split_intervals_no_double_event():
@@ -186,8 +183,8 @@ def test_observation_weight_sandwich_against_numeric_stacked_derivatives():
 
 def test_generic_imputation_preserves_exposures_images_ids_and_observed_values(master):
     d, cfg = master
-    cohort = build_cohort(d, "ceramide")[0]
-    spec = primary_spec("ceramide")
+    cohort = build_cohort(d, "cec")[0]
+    spec = primary_spec("cec")
     design = StudyDesign.freeze(cohort, spec)
     datasets, info = impute(cohort, design, cfg["analysis"], progress=lambda _: None)
     assert info["m"] == 2
@@ -217,10 +214,10 @@ def test_no_real_fallback_and_legacy_pointer_preserved(master, tmp_path):
 def test_explicit_assay_unit_conflicts_are_not_silently_converted():
     from wmh_hcy.studies.runner import explicit_unit_conflicts
 
-    fields = {"BSL_UACR": ("uacr0", "continuous", None), "BSL_Cer_16_0": ("cer16", "continuous", None)}
+    fields = {"BSL_UACR": ("uacr0", "continuous", None)}
     record = {"path": "source.sas7bdat", "field_columns": {s: s for s in fields},
-              "labels": {"BSL_UACR": "UACR (mg/g)", "BSL_Cer_16_0": "Ceramide (nmol/L)"}}
+              "labels": {"BSL_UACR": "UACR (mg/g)"}}
     owner = {s: record["path"] for s in fields}
-    assert len(explicit_unit_conflicts([record], owner, fields)) == 2
-    record["labels"] = {"BSL_UACR": "UACR (mg/mmol)", "BSL_Cer_16_0": "Ceramide (pmol/L)"}
+    assert len(explicit_unit_conflicts([record], owner, fields)) == 1
+    record["labels"] = {"BSL_UACR": "UACR (mg/mmol)"}
     assert explicit_unit_conflicts([record], owner, fields) == []

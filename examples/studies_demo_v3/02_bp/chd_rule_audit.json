@@ -1,0 +1,30 @@
+{
+  "all_clinical": {
+    "n": 2400,
+    "recorded_missing": 731,
+    "filled_from_H_HD": 370,
+    "filled_from_H_CHD_TP": 361,
+    "conflicts": 0,
+    "unresolved_missing": 0,
+    "both_rules": 0,
+    "HD1_vs_recorded1": 0,
+    "TP_present_vs_recorded0": 0,
+    "final_zero": 1222,
+    "final_one": 1178,
+    "final_missing": 0
+  },
+  "eligible": {
+    "n": 2310,
+    "recorded_missing": 701,
+    "filled_from_H_HD": 352,
+    "filled_from_H_CHD_TP": 349,
+    "conflicts": 0,
+    "unresolved_missing": 0,
+    "both_rules": 0,
+    "HD1_vs_recorded1": 0,
+    "TP_present_vs_recorded0": 0,
+    "final_zero": 1176,
+    "final_one": 1134,
+    "final_missing": 0
+  }
+}

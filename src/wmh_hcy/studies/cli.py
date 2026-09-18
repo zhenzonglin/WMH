@@ -9,7 +9,7 @@ from .registry import STUDIES
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Five independent CNSR-III imaging studies (Python only)")
+    parser = argparse.ArgumentParser(description="Four independent CNSR-III imaging studies (Python only)")
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("audit", "run", "summary", "diagnose"):
         p = sub.add_parser(command)

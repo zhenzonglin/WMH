@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from docx import Document
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
@@ -17,7 +18,7 @@ from wmh_hcy.studies.registry import SOURCES, STUDIES, UNITS, roles
 
 
 def main():
-    text = (ROOT / "docs/five_studies_plan.md").read_text(encoding="utf-8")
+    text = (ROOT / "docs/four_studies_plan.md").read_text(encoding="utf-8")
     doc = Document()
     # Bundled default templates can carry a decorative Title border. Remove it.
     for element in [doc.styles.element, doc.element]:
@@ -38,9 +39,9 @@ def main():
     doc.styles["Normal"].paragraph_format.widow_control = True
     doc.styles["Heading 1"].paragraph_format.space_before = Pt(0)
     header = section.header.paragraphs[0]
-    header.text = "CNSR III  影像与长期预后  |  统计分析方案  |  2026年9月17日"
+    header.text = "CNSR III  影像与长期预后  |  统计分析方案  |  2026年9月18日"
     header.runs[0].font.size = Pt(8)
-    header.runs[0].font.color.rgb = RGBColor(100, 100, 100)
+    header.runs[0].font.color.rgb = RGBColor(0, 0, 0)
     footer = section.footer.paragraphs[0]
     footer.alignment = 2
     footer.add_run("第 ").font.size = Pt(9)
@@ -50,17 +51,20 @@ def main():
     footer.add_run(" 页").font.size = Pt(9)
     lines = text.splitlines()
     i = 0
+    page_before = False
     while i < len(lines):
         line = lines[i].strip()
         i += 1
         if not line:
             continue
         if line == "<!-- PAGE -->":
-            doc.add_page_break()
+            page_before = True
         elif line.startswith("# "):
-            doc.add_paragraph(line[2:].replace("五项独立研究", "\n五项独立研究"), "Title")
+            doc.add_paragraph(line[2:].replace("四项独立研究", "\n四项独立研究"), "Title")
         elif line.startswith("## "):
-            doc.add_paragraph(line[3:], "Heading 1")
+            paragraph = doc.add_paragraph(line[3:], "Heading 1")
+            paragraph.paragraph_format.page_break_before = page_before
+            page_before = False
         elif line.startswith("### "):
             doc.add_paragraph(line[4:], "Heading 2")
         elif line.startswith("|"):
@@ -75,6 +79,8 @@ def main():
             table.style = "Table Grid"
             if len(values[0]) == 3:
                 widths = [1.32, 2.7, 2.88]
+            elif values[0][0] == "原始记录与规则证据":
+                widths = [3.5, 3.4]
             else:
                 widths = [1.45, 5.45]
             for j, width in enumerate(widths):
@@ -83,6 +89,7 @@ def main():
                 cells = table.rows[0].cells if ri == 0 else table.add_row().cells
                 for ci, value in enumerate(values_row):
                     cells[ci].width = Inches(widths[ci])
+                    cells[ci].vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
                     cells[ci].text = value
                     for p in cells[ci].paragraphs:
                         p.paragraph_format.space_after = Pt(5)
@@ -105,23 +112,23 @@ def main():
                 table._tbl.tblPr.append(borders)
             for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
                 e = OxmlElement("w:"+edge)
-                for k, v in {"val": "single", "sz": "4", "color": "D0D0D0"}.items():
+                for k, v in {"val": "single", "sz": "4", "color": "D9D9D9"}.items():
                     e.set(qn("w:"+k), v)
                 borders.append(e)
             doc.add_paragraph().paragraph_format.space_after = Pt(2)
         else:
             doc.add_paragraph(line)
-    target = ROOT / "docs/CNSRIII_五项独立研究统计分析方案_20260917.docx"
-    doc.core_properties.title = "CNSR III影像与长期预后五项独立研究统计分析方案"
-    doc.core_properties.subject = "五项独立研究 统计方法及工作站实施"
+    target = ROOT / "docs/CNSRIII_四项独立研究统计分析方案_20260918.docx"
+    doc.core_properties.title = "CNSR III影像与长期预后四项独立研究统计分析方案"
+    doc.core_properties.subject = "四项独立研究 统计方法及工作站实施"
     doc.core_properties.author = "CNSR III研究项目"
     doc.save(target)
-    with (ROOT / "docs/five_studies_fields.csv").open("w", newline="", encoding="utf-8-sig") as f:
+    with (ROOT / "docs/four_studies_fields.csv").open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["source", "canonical", "type", "permitted_codes", "unit"])
         writer.writerows((s, a, t, ";".join(map(str, c or [])), UNITS.get(a, t)) for s, (a, t, c) in SOURCES.items())
     ledger = [r for study in STUDIES for r in roles(study)]
-    with (ROOT / "docs/five_studies_covariate_roles.csv").open("w", newline="", encoding="utf-8-sig") as f:
+    with (ROOT / "docs/four_studies_covariate_roles.csv").open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=list(ledger[0]))
         writer.writeheader()
         writer.writerows(ledger)

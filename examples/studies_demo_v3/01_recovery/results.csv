@@ -1,0 +1,11 @@
+analysis,study,tier,family,status,n,outcome_unknown,parameters,imputations,p,statistic,df1,df2,r,method,m,primary_terms,p_bh_secondary
+primary,recovery,primary,multinomial,ESTIMATED,1825,0,66,2,3.0211939971512195e-18,40.34088145740823,2,856491401.5207648,4.185065899919907e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,
+complete_case,recovery,sensitivity,multinomial,ESTIMATED,1748,0,66,1,1.5803434531929983e-17,38.686304382043915,2,inf,0.0,D1 pooled multivariate Wald,1,dependent:wmh_ml;dependent:gm119_ml,
+month12,recovery,secondary,multinomial,ESTIMATED,1789,0,66,2,9.980133396055507e-17,36.84341503535517,2,20912225.09752318,0.0002678932901183084,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,3.992053358422203e-16
+month24,recovery,secondary,multinomial,ESTIMATED,1821,0,66,2,2.4651789540111104e-14,31.333927987357367,2,902174307.8210373,4.077726663544961e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,2.4651789540111104e-14
+month36,recovery,secondary,multinomial,ESTIMATED,1829,0,66,2,1.2142609891272346e-15,34.344642721926654,2,595928850.3695338,5.0173016592828534e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,2.4285219782544692e-15
+month48,recovery,secondary,multinomial,ESTIMATED,1801,0,66,2,2.6192907506607896e-15,33.57587480945538,2,566554651.7727704,5.145730911996188e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,3.4923876675477193e-15
+actual_improvement,recovery,sensitivity,multinomial,ESTIMATED,1213,0,66,2,5.3986576847070836e-11,23.642286426962187,2,745484198.8651159,4.485861798526098e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,
+raw_wmh,recovery,sensitivity,multinomial,ESTIMATED,1825,0,66,2,2.4070982906707487e-18,40.56811198726856,2,713478815.336334,4.585376510001788e-05,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,
+dependent_or_dead,recovery,sensitivity,binary,ESTIMATED,1825,0,33,2,1.1972986998909858e-14,32.05612336735124,2,786049625819.7002,1.3814057099893394e-06,D1 pooled multivariate Wald,2,wmh_ml;gm119_ml,
+observation_weighted,recovery,sensitivity,multinomial,ESTIMATED,1825,128,66,2,8.156784585555062e-17,37.045230258901974,2,10262542.845753893,0.00038245840162975074,D1 pooled multivariate Wald,2,dependent:wmh_ml;dependent:gm119_ml,

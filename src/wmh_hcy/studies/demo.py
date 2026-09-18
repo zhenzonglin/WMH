@@ -54,15 +54,16 @@ def synthetic_tables(n=1200, seed=20260917, missing=True):
                    ldl=np.exp(rng.normal(1, .2, n)), hdl=np.exp(rng.normal(.2, .2, n)),
                    tg=np.exp(rng.normal(.4, .4, n)), apo_ai=rng.normal(1.3, .15, n),
                    cec=cec, uacr0=u0, uacr3=u3, hospital_death=np.full(n, 2), sbp0=sbp3+rng.normal(10, 10, n),
-                   cer24=np.exp(rng.normal(5, .4, n)), cer20=np.exp(rng.normal(3, .4, n)),
                    prior_statin=rng.binomial(1, .3, n), prior_lipid_med=np.full(n, 2),
                    discharge_bp_med=np.full(n, 2))
     # Ensure medication parent has both levels, with coherent structural negatives.
     aliases["discharge_bp_med"] = rng.choice([1, 2], n, p=[.2, .8])
     aliases["discharge_acei"] = np.where(aliases["discharge_bp_med"] == 1, 0, rng.binomial(1, .35, n))
     aliases["discharge_arb"] = np.where(aliases["discharge_bp_med"] == 1, 0, rng.binomial(1, .35, n))
-    aliases["cer16"] = aliases["cer24"]*np.exp(-1+.15*w+rng.normal(0, .5, n))
-    aliases["cer241"] = aliases["cer24"]*np.exp(-.5+.1*w+rng.normal(0, .4, n))
+    # Coherent questionnaire skip patterns, including observed and logically filled CHD.
+    aliases["heart_disease_gate"] = np.where(aliases["chd"] == 0, 1., 2.)
+    aliases["chd_type_present"] = np.where(aliases["chd"] == 1, "1", "")
+    aliases["chd"] = np.where(rng.random(n) < .3, np.nan, aliases["chd"])
     for month, visit in [(3, visit3), (12, visit12)]:
         pressure = sbp3 if month == 3 else sbp3+rng.normal(0, 8, n)
         aliases.update({f"lsbp{month}": pressure, f"rsbp{month}": pressure+rng.normal(0, 4, n),
@@ -89,7 +90,7 @@ def synthetic_tables(n=1200, seed=20260917, missing=True):
     if missing:
         for source in ("BMI", "EDUC", "H_HYPT", "BSL_CYSC", "BSL_TG", "M03_CYSC"):
             frame.loc[rng.random(n) < .025, source] = np.nan
-        for source in ("CEC", "BSL_Cer_16_0", "M03_UACR"):
+        for source in ("CEC", "M03_UACR"):
             frame.loc[rng.random(n) < .05, source] = np.nan
     images = pd.DataFrame({"participant_id": aliases["patient_id"], "wmh_ml": wmh, "wmh_raw_ml": wmh+.05*lesion,
                                "gm119_ml": gm, "lesion_ml": lesion, "icv_ml": rng.normal(1350, 90, n)})

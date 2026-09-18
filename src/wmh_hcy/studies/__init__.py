@@ -1,3 +1,3 @@
-"""Five independent imaging studies. Legacy Hcy workflows are not modified."""
+"""Four independent imaging studies. Legacy outputs are not modified."""
 
-CONTRACT = "imaging_five_studies_20260917_v2"
+CONTRACT = "imaging_four_studies_20260918_v3"

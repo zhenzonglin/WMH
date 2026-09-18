@@ -1,0 +1,35 @@
+{
+  "contract": "imaging_four_studies_20260918_v3",
+  "mode": "synthetic",
+  "generated_records": 2400,
+  "imputations": 2,
+  "iterations": 2,
+  "studies": [
+    {
+      "study": "01_recovery",
+      "analyses": 10,
+      "estimated_analyses": 10,
+      "synthetic_run": "20260918T041936237934Z"
+    },
+    {
+      "study": "02_bp",
+      "analyses": 5,
+      "estimated_analyses": 5,
+      "synthetic_run": "20260918T042151989565Z"
+    },
+    {
+      "study": "05_cec",
+      "analyses": 9,
+      "estimated_analyses": 9,
+      "synthetic_run": "20260918T042355417675Z"
+    },
+    {
+      "study": "06_kidney",
+      "analyses": 11,
+      "estimated_analyses": 11,
+      "synthetic_run": "20260918T042736233717Z"
+    }
+  ],
+  "total_estimated": 35,
+  "total_analyses": 35
+}

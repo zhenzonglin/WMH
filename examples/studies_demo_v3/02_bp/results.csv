@@ -1,0 +1,6 @@
+analysis,study,tier,family,status,n,outcome_unknown,parameters,imputations,p,statistic,df1,df2,r,method,m,primary_terms
+primary,bp,primary,cox,ESTIMATED,2310,0,35,2,0.4532050219548798,0.7914106687946919,2,107893113708.7213,3.728639409681727e-06,D1 pooled multivariate Wald,2,sbp3_x_wmh_ml;sbp3_rcs_x_wmh_ml
+complete_case,bp,sensitivity,cox,ESTIMATED,2139,0,35,1,0.22211041786849312,1.5045806429751842,2,inf,0.0,D1 pooled multivariate Wald,1,sbp3_x_wmh_ml;sbp3_rcs_x_wmh_ml
+mean_arms,bp,sensitivity,cox,ESTIMATED,2310,0,35,2,0.39926592576804415,0.9181276348168824,2,26891455.43226476,0.00023623326816714097,D1 pooled multivariate Wald,2,sbp3_x_wmh_ml;sbp3_rcs_x_wmh_ml
+month12_landmark,bp,sensitivity,cox,ESTIMATED,2158,0,35,2,0.42232770958192206,0.8619737165897198,2,56012369.66905525,0.00016367212929665134,D1 pooled multivariate Wald,2,sbp3_x_wmh_ml;sbp3_rcs_x_wmh_ml
+time_varying,bp,sensitivity,cox,ESTIMATED,2310,0,41,2,0.2324245214514114,1.4591897457785077,2,10726626613.529736,1.1825491044889234e-05,D1 pooled multivariate Wald,2,sbp3_x_wmh_ml_late;sbp3_rcs_x_wmh_ml_late

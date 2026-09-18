@@ -10,13 +10,12 @@ import pandas as pd
 from ..common import DataError, read_json, resolve, sha256, unique_ids
 from .registry import FOLDERS
 
-FOCUS = {"bp": ("IMG_ICAS", "H_CHD", "BSL_CYSC"),
-         "ceramide": ("BSL_Cer_16_0", "BSL_Cer_24_0", "BSL_Cer_24_1"),
-         "cec": ("CEC",), "kidney": ("M03_CYSC",)}
+FOCUS = {"bp": ("IMG_ICAS", "H_CHD", "H_HD", "H_CHD_TP", "BSL_CYSC"),
+         "cec": ("CEC", "Apo_AI"), "kidney": ("M03_CYSC",)}
 PATTERNS = {"ICAS": r"icas|颅内.*(?:狭窄|动脉)|intracranial",
-            "CHD": r"chd|冠心病|冠状动脉|coronary",
-            "CERAMIDE": r"ceramide|神经酰胺|cer.*(?:16|24)|c(?:16|24)[_: .]*[01]",
-            "CEC": r"(?:^|_)cec(?:$|_)|efflux|外排|胆固醇流出"}
+            "CHD": r"chd|^h_hd$|冠心病|冠状动脉|coronary",
+            "CEC": r"(?:^|_)cec(?:$|_)|efflux|外排|胆固醇流出",
+            "APO_AI": r"apo[_ -]?a[i1]|apolipoprotein.*a|载脂蛋白.*[Aa]"}
 
 
 def saved_runs(cfg):
@@ -145,7 +144,16 @@ def value_page(runs):
                     counts = "; ".join(f"code{c}={int(value.eq(c).sum())}" for c in codes)
                     other = int((~parts['sas_or_blank_missing'] & ~value.isin(codes)).sum())
                     lines.append(f"  {source} {scope} N={len(d)}; {counts}; missing={int(parts['sas_or_blank_missing'].sum())}; other={other}")
-            lines.append("  H_CHD blanks are not assigned 0; IMG_ICAS code3 is dictionary unknown, not normal.")
+            audit = read_json(root / "chd_rule_audit.json")
+            if audit:
+                for scope, values in audit.items():
+                    lines.append(f"  CHD rules {scope}: recorded_missing={values['recorded_missing']}; "
+                                 f"filled0_HD={values['filled_from_H_HD']}; filled1_TP={values['filled_from_H_CHD_TP']}; "
+                                 f"conflicts={values['conflicts']}; final_missing={values['final_missing']}")
+                lines.append("  Rules: H_HD=1 => CHD=0; nonmissing H_CHD_TP => CHD=1; contradictory evidence blocks fitting.")
+            else:
+                lines.append("  No current CHD rule audit: rerun audit after updating sources/code.")
+            lines.append("  Blanks without either rule remain missing; IMG_ICAS code3 remains unknown.")
         except (DataError, OSError, ValueError) as exc:
             lines.append(f"  BP value check unavailable: {type(exc).__name__} (check local saved inputs)")
     if "kidney" in runs:

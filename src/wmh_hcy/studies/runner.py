@@ -15,7 +15,7 @@ from ..imaging import read_imaging
 from ..sas_extract import extract, inventory, resolve_owners
 from . import CONTRACT
 from .analyses import run_study
-from .data import build_cohort, cohort_audit, derive, read_clinical
+from .data import build_cohort, chd_rule_summary, cohort_audit, derive, read_clinical
 from .design import StudyDesign
 from .registry import FOLDERS, SOURCES, STUDIES, primary_spec, roles
 
@@ -29,10 +29,8 @@ def study_sources(study):
         selected |= {"discharge_mrs"}
     elif study == "bp":
         selected |= {"onset_date", "visit3_date", "visit12_date", "mrs12", "hospital_death_date", "death3", "death6", "death12",
-                     "death3_date", "death6_date", "death12_date", "is_event", "is_day", "fazekas_pv", "fazekas_deep"}
+                     "death3_date", "death6_date", "death12_date", "is_event", "is_day", "heart_disease_gate", "chd_type_present"}
         selected |= {f"y{y}_is_{suffix}" for y in (2, 3, 4, 5) for suffix in ("event", "day")}
-    elif study == "ceramide":
-        selected |= {"cer16", "cer20", "cer24", "cer241", "prior_lipid_med", "onset_date", "sample_date", "pre_mrs", "nihss", "toast"}
     elif study == "cec":
         selected |= {"apo_ai", "prior_lipid_med", "onset_date", "sample_date", "pre_mrs", "nihss", "toast"}
     elif study == "kidney":
@@ -72,8 +70,6 @@ def explicit_unit_conflicts(inv, owner, fields):
         mismatch = False
         if alias in {"uacr0", "uacr3"}:
             mismatch = bool(re.search(r"mg/g(?![a-z])|mg/mg|ug/mg", compact))
-        if alias.startswith("cer"):
-            mismatch = bool(re.search(r"(?<!p)nmol/l|umol/l|mg/l|ng/ml", compact))
         if mismatch:
             issues.append({"source": source, "label": label, "reason": "Explicit label differs from frozen unit contract"})
     return issues
@@ -137,7 +133,7 @@ def prepare(cfg, study):
                      medication_conflicts=int(master.medication_conflict.sum()),
                      bp3_conflicts=int(master.bp3_conflict.sum()),
                      state60_conflicts=int(master.state60_conflict.sum()),
-                     unit_contract="uacr mg/mmol; ceramide pmol/L; CEC percent; blood pressure mmHg; image mL",
+                     unit_contract="uacr mg/mmol; CEC percent; blood pressure mmHg; image mL",
                      counts_are_this_study_only=True)
         audit["unit_conflicts"] = unit_issues
         audit["source_groups"] = {
@@ -146,6 +142,11 @@ def prepare(cfg, study):
         audit["flow_excluded"] = {r.step: int(r.excluded_here) for r in flow.itertuples() if r.excluded_here}
         if study == "bp" and len(data):
             audit["entry_days_quantiles"] = data.entry.quantile([0, .25, .5, .75, 1]).to_dict()
+        if study == "bp":
+            audit["chd_rules"] = {"all_clinical": chd_rule_summary(master), "eligible": chd_rule_summary(data)}
+            dump_json(folder / "chd_rule_audit.json", audit["chd_rules"])
+            columns = ["patient_id", "chd_recorded", "heart_disease_gate", "chd_type_present", "chd", "chd_origin"]
+            master.loc[master.chd_rule_conflict, columns].to_csv(folder / "chd_conflicts.csv", index=False)
         primary_aliases = set(primary_spec(study).predictors)
         invalid_covariates = fields_audit.loc[fields_audit.canonical.isin(primary_aliases) & fields_audit.invalid.gt(0), "source"].tolist()
         audit["invalid_primary_covariates_require_review"] = invalid_covariates
@@ -162,7 +163,8 @@ def prepare(cfg, study):
             audit["primary_design_blocker"] = str(exc)
         audit["status"] = "REVIEW_REQUIRED" if (
             not len(data) or audit["covariates_entirely_missing"] or "primary_design_blocker" in audit
-            or invalid_covariates or unit_issues) else "PREPARED"
+            or invalid_covariates or unit_issues
+            or (study == "bp" and audit["chd_rules"]["eligible"]["conflicts"] > 0)) else "PREPARED"
         state.update(status=audit["status"], audit=audit,
                      cohort_sha256=sha256(folder / "eligible.csv"), master_sha256=sha256(folder / "master.csv"))
         dump_json(folder / "audit.json", audit)
@@ -227,6 +229,6 @@ def read_results(cfg):
         rows.append(row)
     table = pd.DataFrame(rows)
     from statsmodels.stats.multitest import multipletests
-    table["p_holm_five"] = multipletests(table.p.fillna(1), method="holm")[1]
-    table.loc[table.status.ne("ESTIMATED"), "p_holm_five"] = float("nan")
+    table["p_holm_four"] = multipletests(table.p.fillna(1), method="holm")[1]
+    table.loc[table.status.ne("ESTIMATED"), "p_holm_four"] = float("nan")
     return table

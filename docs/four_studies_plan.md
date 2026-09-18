@@ -1,12 +1,8 @@
-# 历史五项研究方案
+# CNSR III影像与长期预后四项独立研究统计分析方案
 
-当前采用[2026年9月18日四项研究方案](four_studies_plan.md)。以下保留第二版历史定义，不作为当前运行依据。
+版本日期 2026年9月18日 第三版
 
-# CNSR III影像与长期预后五项独立研究统计分析方案
-
-版本日期 2026年9月17日 第二版
-
-本方案用于在CNSR-III已有临床、血液和影像资料中开展五项独立观察性研究。研究01、02和06以临床结局为主，研究04和05以影像关联为主。每项研究只有一个主要检验，分别建立队列、插补协变量和保存结果。
+本方案用于在CNSR-III已有临床、血液和影像资料中开展四项独立观察性研究。研究01、02和06以临床结局为主，研究05以影像关联为主。每项研究只有一个主要检验，分别建立队列、插补协变量和保存结果。
 
 本次交付包括可在数据工作站执行的Python项目。患者数据未在本机接入，真实例数、结局数、可估计性和效应仍由工作站产生。本方案不沿用既有Hcy分析的入组人数，不将合成数据演示作为研究结果。
 
@@ -14,11 +10,10 @@
 | --- | --- | --- |
 | 01 早期功能独立后的远期失能 | 3个月已独立生活者的WMH与灰质体积能否提供五年依赖风险信息 | 多分类模型依赖方程中两个影像系数的2自由度联合检验 |
 | 02 恢复期血压与WMH | 实测收缩压与后续复发的关联曲线是否随WMH变化 | 延迟入组Cox中两个血压样条与WMH交互项的联合检验 |
-| 04 神经酰胺与脑损伤表型 | C16:0/C24:0比值是否与更重WMH相关 | 线性模型中主要比值的系数检验 |
 | 05 HDL功能与灰质结构 | 在HDL-C相近时CEC是否与更大灰质体积相关 | 线性模型中CEC的系数检验 |
 | 06 脑肾微血管损伤 | 持续白蛋白尿与五年依赖的关联是否随WMH增强 | 多分类模型依赖方程中持续升高类别与WMH交互的1自由度检验 |
 
-实施顺序为：多SAS字段来源审计 → 精确ID与影像连接 → 五个独立队列 → 固定模型与研究专用插补 → 主检验及预设补充分析 → 截图摘要与HTML报告。五项主要P值同时报告原值和固定五项Holm校正值。
+实施顺序为：多SAS字段来源审计 → 精确ID与影像连接 → 四个独立队列 → 固定模型与研究专用插补 → 主检验及预设补充分析 → 截图摘要与HTML报告。四项主要P值同时报告原值和固定四项Holm校正值。
 
 临床解释围绕条件关联。影像仅测量一次，因此本项目不检验WMH进展、灰质萎缩速度或因果中介机制。研究02的实测血压也不同于随机分配的降压目标。
 
@@ -99,7 +94,7 @@ SBP始终作为连续变量建模。主图横轴为连续SBP，纵轴为相对14
 
 曲线在各WMH展示点周围的分位区间（12.5–37.5、37.5–62.5、62.5–87.5百分位）核验SBP支持范围。对应区间至少20人、目标SBP与140均处于该区间SBP第2.5–97.5百分位之间才展示。该限制只用于绘图，不删分析病例。130相对140的HR仍列补充表，120和150同样预设；固定点对比沿用观测最小至最大范围检查。全部对比使用完整协方差，不把非线性模型概括为全血压范围恒定的每10 mmHg HR。
 
-预设敏感性分析为双侧平均SBP、重度WMH子组、12个月独立血压起点、完整病例和时间变化。视觉PV或深部评分为3定义重度；评分缺失不影响连续WMH主分析。12个月模型改用实际F12_DATE、该访视血压及mRS，重新排除此前首次复发。
+预设敏感性分析为双侧平均SBP、12个月独立血压起点、完整病例和时间变化。本版取消重度WMH分组补充分析，不提取视觉WMH评分；保留从影像提取的全脑WMH连续体积，不增加新的重度阈值。12个月模型改用实际F12_DATE、该访视血压及mRS，重新排除此前首次复发。
 
 时间变化模型在同一Cox中划分访视至发病365天和365至1825天，允许SBP、WMH及交互项随时段变化；以两个交互项的时段差异作联合检验，同时给出两时段临床对比。不能用“一个时段显著、另一个不显著”代替差异检验。
 
@@ -107,33 +102,37 @@ SBP始终作为连续变量建模。主图横轴为连续SBP，纵轴为相对14
 
 <!-- PAGE -->
 
-## 04 神经酰胺与脑损伤表型
+## 冠心病史的问卷跳答逻辑
 
-Mayo Clinic研究发现，C16:0及C16:0/C24:0、C24:1/C24:0与WMH有关，为选择具体分子和比值提供了依据。[5] 神经酰胺既参与细胞膜及信号过程，也与全身代谢背景相关。血浆比值的影像关联不能直接证明脑内某条通路受损，但可检验卒中人群是否存在可重复的脂质与结构特征。
+血压研究同时提取H_CHD、H_HD及H_CHD_TP。依据研究者明确提供的问卷规则：H_HD为1指向H_CHD为0；H_CHD_TP有真实非缺失内容指向H_CHD为1。此处不推断H_HD其他编码的含义，也不把无规则依据的空白当作无冠心病。
 
-主要假设为：常规血脂和预设临床背景相近时，基线C16:0/C24:0越高，校正后WMH越多。主要暴露为log₂(BSL_Cer_16_0／BSL_Cer_24_0)，两项均须实际检测且大于零；主要结局为log(1＋校正后WMH mL)。主队列不要求GM119或五年mRS完整。
+| 原始记录与规则证据 | 分析值及审计处理 |
+| --- | --- |
+| H_CHD缺失 H_HD为1 且H_CHD_TP缺失 | 补为0 标记来源为H_HD跳答 |
+| H_CHD缺失 H_CHD_TP非空 且H_HD不为1 | 补为1 标记来源为H_CHD_TP |
+| H_CHD已填0或1且与规则一致 或没有其他规则证据 | 保留原始有效值 |
+| 两条规则同时命中 或规则与已填H_CHD矛盾 | 标记冲突 保留原值 不插补或自动覆盖 |
+| H_CHD缺失且两条规则均无证据 | 保持缺失 进入既定散在协变量缺失处理 |
 
-采用多变量线性回归及HC3稳健标准误。主要检验为比值系数等于零。系数表示比值每翻倍对应的WMH变换尺度差异，不能直接解释为WMH百分比变化。必要的原尺度展示须标明反变换对象，并区分变换均值与原始体积均值。
+非空判定排除空白、SAS普通缺失和特殊缺失标记；有效数值0也属于非空，按研究者给定规则处理。原始字段保留在只读提取结果；分析表另存chd_recorded、推导后的chd及chd_origin，区分真实填答、两条规则补齐、未解决缺失及冲突。
 
-调整共同背景C，以及BMI、教育、基线胱抑素C、LDL-C、TG、卒中前他汀、采血距发病时间、急性梗死体积和ICV。TG和胱抑素C采用对数变换，急性梗死采用log(1＋体积)。既往他汀固定使用MH_LL_STT，不用随访处方替换。
+每次审计分别输出全体临床记录和血压分析队列的原始缺失、补0人数、补1人数、冲突人数及最终缺失。队列内存在矛盾时，血压分析报告REVIEW_REQUIRED，冲突清单留在本地chd_conflicts.csv；其他独立研究不受影响。12个月血压补充分析也检查对应队列，避免通过插补处理矛盾。
 
-预设次要检验包括：C24:1/C24:0与WMH；主要比值与GM119；主要比值与急性梗死体积；log₂C16:0和log₂C24:0同时进入模型的联合检验及单项估计；主要比值与五年功能状态，再在同一样本上加入WMH。急性梗死作为结局时，调整项中删除同一个急性梗死变量，避免结局解释自身。
+这些规则是依据问卷结构派生协变量，不能用单因素P值决定是否执行。H_HD和H_CHD_TP只用于解释H_CHD，不额外进入回归模型，因此不增加模型参数。缺少辅助字段但已有有效H_CHD时保留原记录。
 
-长期功能验证使用多分类模型和三状态结局；在基线调整集合外补充卒中前mRS、NIHSS和TOAST。它是次要预后验证，不能把加入WMH后系数变化称为因果中介比例。功能缺失另做可观测概率加权。C20:0仅保留描述，不生成缺C18:0的CERT1评分，不遍历全部比值。
-
-次要检验在本研究内进行BH-FDR。主要结果支持时，可表述为“特定脂质比值与白质损伤相关”；单次影像不能确定脂质异常先于WMH形成。
+其他新增字段继续按多SAS来源审计提取。Apo_AI用于CEC的预设扩展模型；不将它改为CEC主队列入组条件。字段是否存在和是否实际有测量值分别计数，新增数据不改变单位、编码、精确ID连接或协变量选择规则。
 
 <!-- PAGE -->
 
 ## 05 HDL功能与灰质结构
 
-HDL-C浓度反映胆固醇含量，CEC测量细胞胆固醇外排相关功能，两者不能互相替代。Dallas Heart Study中，CEC与灰质体积存在正向关联，未发现相应WMH关联。[6] 因此本研究将灰质而非WMH设为主要结局，检验这一功能性指标在卒中人群中的结构关联。
+HDL-C浓度反映胆固醇含量，CEC测量细胞胆固醇外排相关功能，两者不能互相替代。Dallas Heart Study中，CEC与灰质体积存在正向关联，未发现相应WMH关联。[5] 因此本研究将灰质而非WMH设为主要结局，检验这一功能性指标在卒中人群中的结构关联。
 
-用户已确认CEC来自基线采血。主要假设为：HDL-C、头颅大小及其他预设背景相近时，CEC每升高1个标准差与较大GM119灰质总体积相关。纳入成年缺血性卒中患者，CEC、GM119、ICV及主要模型需要的急性梗死体积和基线采血时间可用；不要求WMH、神经酰胺或UACR检测完整。
+用户已确认CEC来自基线采血。主要假设为：HDL-C、头颅大小及其他预设背景相近时，CEC每升高1个标准差与较大GM119灰质总体积相关。纳入成年缺血性卒中患者，CEC、GM119、ICV及主要模型需要的急性梗死体积和基线采血时间可用；不要求WMH或UACR检测完整。
 
 主要模型为HC3稳健标准误的线性回归，结局GM119单位mL，主要检验为CEC系数等于零。使用灰质体积并单独调整ICV，不自动换成灰质/ICV比值。CEC在该队列中按1 SD标准化，保存均值、标准差和原始单位。
 
-主要模型M1采用研究04的调整集合，另固定加入HDL-C。它回答HDL胆固醇浓度相近时CEC是否仍有结构关联。该选择有原始研究依据：Dallas Heart Study表2脚注和图2明确对CEC模型加入HDL-C。[6] 这是一项条件关联定义，不由HDL-C的单因素P值决定，也不等同于已经确认HDL-C是因果混杂因素。
+主要模型M1调整共同背景C、BMI、教育、基线胱抑素C、LDL-C、TG、卒中前他汀、采血距发病时间、急性梗死体积、ICV及HDL-C。TG和胱抑素C取对数，急性梗死体积取log(1＋mL)。它回答HDL胆固醇浓度相近时CEC是否仍有结构关联。该选择有原始研究依据：Dallas Heart Study表2脚注和图2明确对CEC模型加入HDL-C。[5] 这是一项条件关联定义，不由HDL-C的单因素P值决定，也不等同于已经确认HDL-C是因果混杂因素。
 
 新增M0模型，仅从M1中去掉HDL-C项，其余协变量不变。M0与M1必须使用完全相同的患者、结局、CEC尺度和M1产生的同一套完成数据；不另行插补，不因HDL-C缺失扩大M0人群。并排报告CEC系数和95%区间，不把显著性不同当成两模型效应不同，不把系数变化解释为中介比例。M1仍是唯一主要检验，M0属于敏感性分析。调整HDL-C不等于测得每个HDL颗粒的固有功能。
 
@@ -147,11 +146,11 @@ HDL-C浓度反映胆固醇含量，CEC测量细胞胆固醇外排相关功能，
 
 ## 06 脑肾微血管损伤
 
-CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续白蛋白尿与不良结局相关。[7] 本研究将持续白蛋白尿视为可能的全身微血管异常标志，WMH视为既有脑损伤表型，检验两者与远期依赖的关联是否相互修饰。卒中患者中UACR与白质病变严重程度的关联为该假设提供背景依据，但并未证明两者存在交互。[13]
+CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续白蛋白尿与不良结局相关。[6] 本研究将持续白蛋白尿视为可能的全身微血管异常标志，WMH视为既有脑损伤表型，检验两者与远期依赖的关联是否相互修饰。卒中患者中UACR与白质病变严重程度的关联为该假设提供背景依据，但并未证明两者存在交互。[12]
 
 主要假设是：在恢复期功能、血压、肾脏滤过功能及其他预设背景因素相近时，持续白蛋白尿相对两次均低与五年依赖的关联，随基线WMH负担增加而增强。交互零假设为对应系数等于零，采用双侧检验，效应方向单独解释。
 
-纳入3个月存活的成年缺血性卒中患者，两次UACR、WMH和ICV均实际可用；不限3个月mRS 0–2。BSL_UACR和M03_UACR单位固定为mg/mmol，以≥3定义升高，参照KDIGO类别界值。[8] 两次升高不直接等同于完成了慢性肾病诊断。
+纳入3个月存活的成年缺血性卒中患者，两次UACR、WMH和ICV均实际可用；不限3个月mRS 0–2。BSL_UACR和M03_UACR单位固定为mg/mmol，以≥3定义升高，参照KDIGO类别界值。[7] 两次升高不直接等同于完成了慢性肾病诊断。
 
 | 分组 | 基线UACR | 3个月UACR |
 | --- | --- | --- |
@@ -174,13 +173,13 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 
 三个类别交互的3自由度整体检验列为次要。另以连续log(1＋M03_UACR)×W检验方向，并调整基线log(1＋UACR)。保留不含交互的原条件关联模型为次要，以及临床＋WMH模型与增加白蛋白尿类别的增量联合检验。基线UACR与WMH结构模型仅用基线调整因素；不加入未来的3个月指标。
 
-完整病例、NIHSS/TOAST/急性梗死的同子样本扩展和结局可观测概率加权均保留交互。概率差属于补充描述，不将其与相对概率尺度的交互检验混为一谈；二者可有不同结论。两种损伤并存者结局更差本身不能证明交互或生物协同。[14]
+完整病例、NIHSS/TOAST/急性梗死的同子样本扩展和结局可观测概率加权均保留交互。概率差属于补充描述，不将其与相对概率尺度的交互检验混为一谈；二者可有不同结论。两种损伤并存者结局更差本身不能证明交互或生物协同。[13]
 
 <!-- PAGE -->
 
 ## 协变量选择和估计范围
 
-共同背景C固定为年龄、性别、吸烟、饮酒、高血压、糖尿病和既往卒中。选择依据是暴露、结局的已知决定因素及临床时间顺序，结合修正析取原因准则。[9] 这是一种基于外部知识的调整策略，而不是单靠当前数据证明某变量是混杂因素。
+共同背景C固定为年龄、性别、吸烟、饮酒、高血压、糖尿病和既往卒中。选择依据是暴露、结局的已知决定因素及临床时间顺序，结合修正析取原因准则。[8] 这是一种基于外部知识的调整策略，而不是单靠当前数据证明某变量是混杂因素。
 
 | 变量角色 | 假定路径或统计用途 | 本方案如何处理 |
 | --- | --- | --- |
@@ -201,13 +200,13 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 
 ## 缺失资料和合并推断
 
-每项研究及需要不同结局或额外协变量的扩展模型，独立建立插补模型，默认50份、10次迭代并记录随机种子。只插补散在缺失协变量，不插补ID、年龄等入组资格、主要暴露、影像、结局、事件时间或整列未测项目。已观测值原样保留。
+每项研究及需要不同结局或额外协变量的扩展模型，独立建立插补模型；CEC的M0直接复用M1完成数据。其余模型默认50份、10次迭代并记录随机种子。只插补散在缺失协变量，不插补ID、年龄等入组资格、主要暴露、影像、结局、事件时间或整列未测项目。已观测值原样保留。
 
-插补模型包含该研究的暴露、结局及可用的非线性和交互辅助项。血压生存模型包含事件指示及考虑延迟入组的Nelson–Aalen累计风险信息，参照White与Royston的生存插补思路。[10] 非线性和交互项在每份完成数据中重新计算；miceforest的FCS仍是近似兼容方法，MAR也不能由诊断图证明。
+插补模型包含该研究的暴露、结局及可用的非线性和交互辅助项。血压生存模型包含事件指示及考虑延迟入组的Nelson–Aalen累计风险信息，参照White与Royston的生存插补思路。[9] 非线性和交互项在每份完成数据中重新计算；miceforest的FCS仍是近似兼容方法，MAR也不能由诊断图证明。
 
-标量系数和临床对比使用Rubin规则：总方差等于平均插补内方差，加上包含有限插补修正的插补间方差。任一线性对比使用完整协方差c′Vc，不仅使用对角标准误。多参数检验采用Li、Raghunathan与Rubin的D1方法，基于平均系数、平均协方差及插补间变异计算F统计量和自由度。[11,12] 不平均各次插补P值。
+标量系数和临床对比使用Rubin规则：总方差等于平均插补内方差，加上包含有限插补修正的插补间方差。任一线性对比使用完整协方差c′Vc，不仅使用对角标准误。多参数检验采用Li、Raghunathan与Rubin的D1方法，基于平均系数、平均协方差及插补间变异计算F统计量和自由度。[10,11] 不平均各次插补P值。
 
-五项唯一主要检验报告双侧原始P及95%区间，总汇报补充固定五项Holm校正。未估计的预设主要检验仍占据五项家庭位置，调整计算内部按P=1处理，但该项目自身结果显示未估计而非P=1。次要分析在研究内固定家庭做BH-FDR；敏感性分析以方向、大小和区间稳定性解释。
+四项唯一主要检验报告双侧原始P及95%区间，总汇报补充固定四项Holm校正。未估计的预设主要检验仍占据四项家庭位置，调整计算内部按P=1处理，但该项目自身结果显示未估计而非P=1。次要分析在研究内固定家庭做BH-FDR；敏感性分析以方向、大小和区间稳定性解释。
 
 功能结局未知者不进入主要结局模型，也不视为独立。可观测概率加权分析先在符合起点资格的全体人群中，根据起点时已知的暴露及调整因素拟合结局是否可观测，再对有结局者使用逆概率权重。报告最小观测概率、最大权重、99百分位及有效样本量。默认不自动截断权重；分离或不可估计明确报告。
 
@@ -221,7 +220,7 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 
 血压Cox使用经验证的无惩罚求解器。必要时仅作可逆的中心缩放并以另一优化起点求解同一似然，不改模型、不删协变量。预设分段模型承担时间变化的正式敏感性检验。没有自动将不收敛模型改成惩罚模型或更换结局的路径。
 
-结果至少区分三种状态：已估计且效应方向与假设一致；已估计但证据不足或方向不同；因数据或数值条件未估计。P>0.05不证明无关联；P<0.05也不代表临床差异有意义。联合检验与单项估计须一起阅读。对五项研究中恰好显著的一项，不能忽略共同探索背景及多重比较。
+结果至少区分三种状态：已估计且效应方向与假设一致；已估计但证据不足或方向不同；因数据或数值条件未估计。P>0.05不证明无关联；P<0.05也不代表临床差异有意义。联合检验与单项估计须一起阅读。对四项研究中恰好显著的一项，不能忽略共同探索背景及多重比较。
 
 不存在预填的样本量或功效结论。工作站审计将输出实际模型参数数、结局类别数或事件数。用事件/参数比和区间宽度描述精度压力，不把一个经验阈值当作删变量的自动规则。
 
@@ -238,8 +237,8 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 | ID和人群 | code_n字符串精确连接；AGE；D_DIAG |
 | 功能状态 | F3_MRS、D_MRS、F12_MRS、m24_mrs、m36_mrs、m48_mrs、m60_mrs及相应死亡记录 |
 | 血压与起点 | F3_LSBP、F3_RSBP及同侧DBP；F3_DATE；12个月使用F12对应字段 |
+| 冠心病跳答 | H_CHD、H_HD、H_CHD_TP 原始值与推导值均保留 |
 | 五年复发 | Y5_IS、Y5_IS_DD；既有1至4年记录只作一致性核验 |
-| 神经酰胺 | BSL_Cer_16_0、BSL_Cer_24_0、BSL_Cer_24_1；C20:0描述 |
 | CEC和常规血脂 | CEC、BSL_HDL、BSL_LDL、BSL_TG、Apo_AI |
 | 肾脏指标 | BSL_UACR、M03_UACR；BSL_CYSC、M03_CYSC |
 | 影像 | 全掩膜校正WMH、原始WMH、真实ICV702、GM119、急性梗死体积 |
@@ -248,7 +247,7 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 
 不新增中心变量、发病至MRI间隔或人工影像质控门槛。日期、单位、编码和体积有效性检查属于数据接口检查。不会以20个区域WMH之和替代全脑体积，不采用SuStaIn健康锚定和40特征完整性门槛。3个月访视日期不以采血日期替代，UACR按已标注波次定义。
 
-工作站先执行wmh-study audit --study all，或run --study all --through prepare。每项输出来源、覆盖交集、排除、结局、缺失、参数和冲突。核对后，分别以run --study recovery、bp、ceramide、cec、kidney --through report启动相应研究。summary --page 1集中显示五项主检验。
+工作站先执行wmh-study audit --study all，或run --study all --through prepare。每项输出来源、覆盖交集、排除、结局、缺失、参数和冲突。核对后，分别以run --study recovery、bp、cec、kidney --through report启动相应研究。summary --page 1集中显示四项主检验。
 
 新增结果位于outputs/real/studies下，按研究和时间戳分目录。旧Hcy及recurrence_v3输出保持原状。本地患者CSV和病例清单不随GitHub发布。更换数据来源或修正原始数据后重新准备队列，不手改已冻结快照。
 
@@ -264,32 +263,31 @@ CNSR-III已发表基线和3个月白蛋白尿与一年预后的分析，持续�
 
 [4] Muntner P等. Measurement of Blood Pressure in Humans: A Scientific Statement From the American Heart Association. Hypertension, 2019. DOI 10.1161/HYP.0000000000000087. https://pmc.ncbi.nlm.nih.gov/articles/PMC11409525/
 
-[5] Mielke MM等. Elevated Plasma Ceramides Are Associated With Higher White Matter Hyperintensity Volume—Brief Report. Arteriosclerosis, Thrombosis, and Vascular Biology, 2019. PMID 31510790. DOI 10.1161/ATVBAHA.119.313099. https://pubmed.ncbi.nlm.nih.gov/31510790/
 
-[6] Giacona JM等. Associations Between High-Density Lipoprotein Cholesterol Efflux and Brain Grey Matter Volume. Journal of Clinical Medicine, 2024. DOI 10.3390/jcm13206218. https://pmc.ncbi.nlm.nih.gov/articles/PMC11509043/
+[5] Giacona JM等. Associations Between High-Density Lipoprotein Cholesterol Efflux and Brain Grey Matter Volume. Journal of Clinical Medicine, 2024. DOI 10.3390/jcm13206218. https://pmc.ncbi.nlm.nih.gov/articles/PMC11509043/
 
-[7] Wang D等. The Association between Baseline and 3-Month Albuminuria and 1-Year Prognosis of Ischemic Stroke. Cerebrovascular Diseases, 2022;51(1):67–74. PMID 34515069. DOI 10.1159/000518180. https://pubmed.ncbi.nlm.nih.gov/34515069/
+[6] Wang D等. The Association between Baseline and 3-Month Albuminuria and 1-Year Prognosis of Ischemic Stroke. Cerebrovascular Diseases, 2022;51(1):67–74. PMID 34515069. DOI 10.1159/000518180. https://pubmed.ncbi.nlm.nih.gov/34515069/
 
 <!-- PAGE -->
 
 ## 统计方法参考与版本记录
 
-[8] KDIGO. CKD classification and albuminuria categories, 2024. 本方案使用UACR mg/mmol分类界值。https://kdigo.org/wp-content/uploads/2024/07/07232024-KDIGO-CKD.pdf
+[7] KDIGO. CKD classification and albuminuria categories, 2024. 本方案使用UACR mg/mmol分类界值。https://kdigo.org/wp-content/uploads/2024/07/07232024-KDIGO-CKD.pdf
 
-[9] VanderWeele TJ. Principles of confounder selection. European Journal of Epidemiology, 2019. DOI 10.1007/s10654-019-00494-6. https://pmc.ncbi.nlm.nih.gov/articles/PMC6447501/
+[8] VanderWeele TJ. Principles of confounder selection. European Journal of Epidemiology, 2019. DOI 10.1007/s10654-019-00494-6. https://pmc.ncbi.nlm.nih.gov/articles/PMC6447501/
 
-[10] White IR, Royston P. Imputing missing covariate values for the Cox model. Statistics in Medicine, 2009. PMID 19452569. https://pubmed.ncbi.nlm.nih.gov/19452569/
+[9] White IR, Royston P. Imputing missing covariate values for the Cox model. Statistics in Medicine, 2009. PMID 19452569. https://pubmed.ncbi.nlm.nih.gov/19452569/
 
-[11] Li KH, Raghunathan TE, Rubin DB. Large-sample significance levels from multiply imputed data using moment-based statistics and an F reference distribution. Journal of the American Statistical Association, 1991. DOI 10.1080/01621459.1991.10475152.
+[10] Li KH, Raghunathan TE, Rubin DB. Large-sample significance levels from multiply imputed data using moment-based statistics and an F reference distribution. Journal of the American Statistical Association, 1991. DOI 10.1080/01621459.1991.10475152.
 
-[12] van Buuren S. Flexible Imputation of Missing Data. Multiparameter inference章节，D1合并Wald检验公式说明。https://stefvanbuuren.name/fimd/sec-multiparameter.html
+[11] van Buuren S. Flexible Imputation of Missing Data. Multiparameter inference章节，D1合并Wald检验公式说明。https://stefvanbuuren.name/fimd/sec-multiparameter.html
 
-[13] Urinary albumin-to-creatinine ratio is associated with white matter lesions severity in first-ever stroke patients. 2017. PMID 28131201. https://pubmed.ncbi.nlm.nih.gov/28131201/
+[12] Urinary albumin-to-creatinine ratio is associated with white matter lesions severity in first-ever stroke patients. 2017. PMID 28131201. https://pubmed.ncbi.nlm.nih.gov/28131201/
 
-[14] VanderWeele TJ, Knol MJ. A Tutorial on Interaction. Epidemiologic Methods, 2014;3(1):33–72. DOI 10.1515/em-2013-0005. https://doi.org/10.1515/em-2013-0005
+[13] VanderWeele TJ, Knol MJ. A Tutorial on Interaction. Epidemiologic Methods, 2014;3(1):33–72. DOI 10.1515/em-2013-0005. https://doi.org/10.1515/em-2013-0005
 
 文献用途分别为临床背景、具体暴露选择、测量原则、协变量选择和合并推断。不同人群的影像关联不能替代本队列验证；随机血压目标试验不能直接赋予观察性实测血压因果含义。
 
-第二版合同为imaging_five_studies_20260917_v2。修订包括连续血压主图、CEC同样本同插补的HDL-C调整比较、脑肾持续白蛋白尿×WMH主要检验及交互曲线。五项主要检验数量不变；脑肾新版P值替换旧版主效应P值进入Holm。旧版结果保留，标为PREVIOUS_VERSION，不混入新版汇总。
+第三版标识为imaging_four_studies_20260918_v3。根据研究者2026年9月18日决定，移除神经酰胺研究及视觉评分定义的重度WMH分析；新增冠心病史的问卷跳答规则。原编号01、02、05、06保持不变。新版主要检验为四项，报告p_holm_four；旧版结果保留并标为PREVIOUS_VERSION。旧版五项检验校正值不与本版混合，也不将本次修订称为原始预注册方案。
 
 真实分析前优先核对每个研究的字段来源、单位、临床影像交集、五年三状态人数或血压风险集事件数。任何关于有效样本、精度或最终发现的陈述，必须以工作站新运行的审计与结果为依据。

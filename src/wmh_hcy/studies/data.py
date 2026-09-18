@@ -14,6 +14,49 @@ def number(data, name):
     return pd.to_numeric(data.get(name, pd.Series(np.nan, index=data.index)), errors="coerce")
 
 
+def observed_text(values):
+    """SAS missing tokens and blanks are not a positive questionnaire response."""
+    text = values.astype("string").str.strip()
+    return text.notna() & ~text.str.match(r"^\.?[A-Z_]$|^\.$|^$", na=False)
+
+
+def reconcile_chd(data):
+    """User-specified skip rules, with contradictions retained for explicit review."""
+    d = data.copy()
+    recorded = number(d, "chd_recorded") if "chd_recorded" in d else number(d, "chd")
+    negative = number(d, "heart_disease_gate").eq(1)
+    positive = number(d, "chd_type_present").eq(1)
+    conflict = (negative & positive) | (negative & recorded.eq(1)) | (positive & recorded.eq(0))
+    d["chd_recorded"] = recorded
+    d["chd"] = recorded
+    d["chd_origin"] = np.where(recorded.notna(), "recorded", "unresolved_missing")
+    for flag, value, label in ((negative, 0., "filled_from_H_HD"), (positive, 1., "filled_from_H_CHD_TP")):
+        use = recorded.isna() & flag & ~conflict
+        d.loc[use, "chd"] = value
+        d.loc[use, "chd_origin"] = label
+    d["chd_rule_conflict"] = conflict
+    d.loc[conflict, "chd"] = np.nan
+    d.loc[conflict, "chd_origin"] = "conflict"
+    return d
+
+
+def chd_rule_summary(data):
+    original = number(data, "chd_recorded")
+    final = number(data, "chd")
+    origin = data.get("chd_origin", pd.Series("unavailable", index=data.index))
+    negative = number(data, "heart_disease_gate").eq(1)
+    positive = number(data, "chd_type_present").eq(1)
+    return {"n": len(data), "recorded_missing": int(original.isna().sum()),
+            "filled_from_H_HD": int(origin.eq("filled_from_H_HD").sum()),
+            "filled_from_H_CHD_TP": int(origin.eq("filled_from_H_CHD_TP").sum()),
+            "conflicts": int(origin.eq("conflict").sum()), "unresolved_missing": int(origin.eq("unresolved_missing").sum()),
+            "both_rules": int((negative & positive).sum()),
+            "HD1_vs_recorded1": int((negative & original.eq(1)).sum()),
+            "TP_present_vs_recorded0": int((positive & original.eq(0)).sum()),
+            "final_zero": int(final.eq(0).sum()), "final_one": int(final.eq(1).sum()),
+            "final_missing": int(final.isna().sum())}
+
+
 def read_clinical(cfg):
     supplied = cfg["inputs"].get("clinical_csv")
     path = resolve(cfg, supplied) if supplied else outdir(cfg) / "extracted/clinical_raw.csv"
@@ -37,6 +80,9 @@ def read_clinical(cfg):
             value = pd.Series(pd.NaT if kind in {"date", "datetime"} else np.nan, index=raw.index)
         elif kind == "id":
             value = raw[source].astype(str)
+        elif kind == "presence":
+            seen = observed_text(raw[source])
+            value = pd.Series(1., index=raw.index).where(seen)
         elif kind in {"date", "datetime"}:
             try:
                 value = sas_date(raw[source], formats.get(source, ""), overrides.get(source))
@@ -61,7 +107,7 @@ def read_clinical(cfg):
             # Positivity is a measurement contract, not percentile trimming.
             if name in {"cysc", "cysc3", "tg", "hdl", "ldl", "apo_ai", "bmi"}:
                 invalid |= value.notna() & value.le(0)
-            if name in {"cer16", "cer20", "cer24", "cer241", "uacr0", "uacr3", "cec"}:
+            if name in {"uacr0", "uacr3", "cec"}:
                 invalid |= value.notna() & value.lt(0)
             if "sbp" in name or "dbp" in name:
                 invalid |= value.notna() & value.le(0)
@@ -71,7 +117,7 @@ def read_clinical(cfg):
         audits.append({"source": source, "canonical": name, "present": present,
                        "observed": int(value.notna().sum()), "invalid": bad,
                        "unit": UNITS.get(name, "dictionary"), "patients": len(raw), "issue": issue})
-    data = pd.DataFrame(columns)
+    data = reconcile_chd(pd.DataFrame(columns))
     # Parent "no medication" answers are structural negatives, not missing-child imputation.
     contradiction = data.prior_lipid_med.eq(1) & data.prior_statin.eq(1)
     data["medication_conflict"] = contradiction
@@ -138,19 +184,11 @@ def functional_state(data, month):
 
 def derive(data):
     d = data.copy()
-    c16, c24, c241 = (number(d, n) for n in ("cer16", "cer24", "cer241"))
-    d["cer_ratio"] = np.log2(c16.where(c16.gt(0)) / c24.where(c24.gt(0)))
-    d["cer_alt"] = np.log2(c241.where(c241.gt(0)) / c24.where(c24.gt(0)))
-    d["log_c16"] = np.log2(c16.where(c16.gt(0)))
-    d["log_c24"] = np.log2(c24.where(c24.gt(0)))
     a, b = number(d, "uacr0"), number(d, "uacr3")
     d["albuminuria"] = (a.ge(3).astype(int) + 2*b.ge(3).astype(int)).where(a.notna() & b.notna())
     d["uacr0_log"], d["uacr3_log"] = np.log1p(a), np.log1p(b)
     for month in (3, 12, 24, 36, 48, 60):
         d[f"state{month}"], d[f"state{month}_conflict"] = functional_state(d, month)
-    pv, deep = number(d, "fazekas_pv"), number(d, "fazekas_deep")
-    d["severe_wmh"] = (pv.eq(3) | deep.eq(3)).astype(float).where(
-        pv.eq(3) | deep.eq(3) | (pv.notna() & deep.notna()))
     if "wmh_ml" in d:
         d["log_wmh"] = np.log1p(d.wmh_ml.where(d.wmh_ml.ge(0)))
         d["log_lesion"] = np.log1p(d.lesion_ml.where(d.lesion_ml.ge(0)))
@@ -166,14 +204,14 @@ def volume_ok(data, name):
 
 
 def build_cohort(master, study, month=3):
+    if study not in COVARIATES:
+        raise DataError(f"Study is not active in this contract: {study}")
     d = derive(master)
     rules = [("adult_ischemic_stroke", d.age.ge(18) & d.diagnosis.eq(1)),
              ("available_true_icv", volume_ok(d, "icv_ml"))]
     images = ("gm119_ml", "lesion_ml") if study == "cec" else ("wmh_ml",)
     if study == "recovery":
         images += ("gm119_ml", "lesion_ml")
-    if study == "ceramide":
-        images += ("lesion_ml",)
     rules += [(f"available_{c}", volume_ok(d, c)) for c in images]
     if study in {"recovery", "bp", "kidney"}:
         alive = (number(d, f"death{month}").eq(2) | number(d, f"mrs{month}").between(0, 5))
@@ -202,9 +240,6 @@ def build_cohort(master, study, month=3):
             ("no_observation_after_dated_death", d.death_day.isna() | stop.le(d.death_day)),
             ("followup_after_visit", d.exit.gt(d.entry)),
         ]
-    elif study == "ceramide":
-        rules += [("observed_positive_cer16_and_cer24", np.isfinite(d.cer_ratio)),
-                  ("known_baseline_sample_time", np.isfinite(d.sample_day) & d.sample_day.ge(0))]
     elif study == "cec":
         rules += [("observed_baseline_cec", np.isfinite(d.cec) & d.cec.ge(0)),
                   ("known_baseline_sample_time", np.isfinite(d.sample_day) & d.sample_day.ge(0))]
@@ -213,7 +248,7 @@ def build_cohort(master, study, month=3):
     if study in {"recovery", "kidney"}:
         rules.append(("no_five_year_state_contradiction", ~d.state60_conflict))
     eligible, exclusions, flow = apply_rules(d, rules)
-    outcome = "event_type" if study == "bp" else "log_wmh" if study == "ceramide" else (
+    outcome = "event_type" if study == "bp" else (
         "gm119_ml" if study == "cec" else "state60")
     if study in {"recovery", "kidney"}:
         flow.append({"step": "known_five_year_functional_state", "remaining": int(eligible[outcome].notna().sum()),

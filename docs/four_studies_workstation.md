@@ -1,12 +1,8 @@
-# 历史五项研究工作站操作
-
-当前运行步骤见[四项研究工作站操作](four_studies_workstation.md)。以下命令中的ceramide及五项汇总已退役。
-
-# 五项独立研究的工作站操作
+# 四项独立研究的工作站操作
 
 新命令是 `wmh-study`。已有 `wmh-hcy`、一年分析和 `recurrence_v3` 的结果及指针均保留。无需重新整理原始SAS或SuStaIn目录。
 
-当前为第二版 `imaging_five_studies_20260917_v2`：血压以连续SBP曲线为主图；CEC新增同样本同插补的未调整HDL-C模型；脑肾主要检验改为持续白蛋白尿×连续WMH。旧结果仍可从旧运行目录查看，但摘要中标为 `PREVIOUS_VERSION`，不与新版P值合并。代码更新后按下面步骤重新审计和运行，各次结果均保留。
+当前为第三版 `imaging_four_studies_20260918_v3`：保留recovery、bp、cec、kidney，取消神经酰胺和视觉重度WMH子组。血压研究加入H_HD与H_CHD_TP跳答核查，CEC保留Apo_AI扩展。汇总使用四项Holm校正；旧合同结果标为PREVIOUS_VERSION。
 
 ## 第一步 更新代码和入口
 
@@ -43,12 +39,11 @@ wmh-hcy configure --sas-dir "/实际SAS目录" --sustain-dir "/实际SuStaIn产�
 wmh-study audit --study all
 ```
 
-它递归扫描多份SAS，提取研究白名单CSV，连接既有影像，分别建立五个队列。每项显示来源、例数、结局数、缺失、排除和参数数。可以逐项运行，方便截图：
+它递归扫描多份SAS，提取研究白名单CSV，连接既有影像，分别建立四个队列。每项显示来源、例数、结局数、缺失、排除和参数数。可以逐项运行，方便截图：
 
 ```bash
 wmh-study audit --study recovery
 wmh-study audit --study bp
-wmh-study audit --study ceramide
 wmh-study audit --study cec
 wmh-study audit --study kidney
 ```
@@ -62,7 +57,6 @@ wmh-study audit --study kidney
 ```bash
 wmh-study run --study recovery --through report
 wmh-study run --study bp --through report
-wmh-study run --study ceramide --through report
 wmh-study run --study cec --through report
 wmh-study run --study kidney --through report
 wmh-study summary --page 1
@@ -82,16 +76,16 @@ wmh-study diagnose --page 2
 wmh-study diagnose --page 3
 ```
 
-第一页区分字段不存在与字段存在但无有效值；第二页在已保存的全部SAS列名和标签中查找ICAS、冠心病、神经酰胺和CEC候选名称；第三页只输出冠心病/ICAS编码计数、恢复期胱抑素C异常类型及其在队列中的人数。候选名称不会自动替换正式变量。三页均不写文件、不改编码、不重新扫描SAS、不拟合模型、不打印ID或个体化验值；CSV输入若在审计后发生改变，第三页拒绝检查该来源。
+第一页区分字段不存在与字段存在但无有效值；第二页在已保存的全部SAS列名和标签中查找ICAS、冠心病、CEC和Apo_AI候选名称；第三页只输出冠心病/ICAS编码计数、恢复期胱抑素C异常类型及其在队列中的人数。候选名称不会自动替换正式变量。三页均不写文件、不改编码、不重新扫描SAS、不拟合模型、不打印ID或个体化验值；CSV输入若在审计后发生改变，第三页拒绝检查该来源。
 
-空的主要队列显示协变量缺失“未评估”，不能据此认为原始年龄等所有字段都不存在。`M03_CYSC`非法值计数来自临床提取表，第三页另列其中进入肾脏分析队列的人数。`H_CHD`空值不会自动填0；需要字典和跳答规则才能判定其含义。详见[2026-09-18审计诊断修订](five_studies_audit_diagnostics_20260918.md)。
+空的主要队列显示协变量缺失“未评估”，不能据此认为原始年龄等所有字段都不存在。`M03_CYSC`非法值计数来自临床提取表，第三页另列其中进入肾脏分析队列的人数。`H_CHD`仅依据本次已确认规则补齐：H_HD=1补0，H_CHD_TP非空补1。冲突单列，其他缺失不当作0。原始值和推导值均保留；第3页列出规则补齐及冲突计数。
 
 ```bash
 wmh-study summary --page 1
 wmh-study summary --page 2
 ```
 
-第一页显示五项主要检验的样本量、参数数、原始P值和固定五项Holm校正。第二页显示独立队列审计。每个报告有明确的 `real` 或 `synthetic` 标记。
+第一页显示四项主要检验的样本量、参数数、原始P值和固定四项Holm校正。第二页显示独立队列审计。每个报告有明确的 `real` 或 `synthetic` 标记。
 
 结果位置：
 
@@ -101,14 +95,13 @@ outputs/real/studies/
   summary.csv
   01_recovery/runs/运行时间/
   02_bp/runs/运行时间/
-  04_ceramide/runs/运行时间/
   05_cec/runs/运行时间/
   06_kidney/runs/运行时间/
 ```
 
 每次运行包括 `config_snapshot.json`、`status.json`、`field_audit.csv`、`cohort_flow.csv`、`audit.json`、`results.csv`、`report.html`、`primary_result.png`。每个模型目录包括定义、固定尺度、插补诊断、系数、完整诊断和失败原因。
 
-第二版重点查看：血压的 `primary/continuous_sbp.csv`、`primary/sbp_distribution.csv` 和连续主图，固定点对比保留在 `primary/clinical_contrasts.csv`；CEC的 `cec_hdl_comparison.csv`，两模型必须同人数、同插补；脑肾的 `primary/kidney_interaction_curves.csv`，包含依赖概率、概率差和条件相对概率比。脑肾主要P值现在对应交互，不能与旧版持续白蛋白尿主效应P值直接比较。
+重点查看：血压的 `primary/continuous_sbp.csv`、`primary/sbp_distribution.csv` 和连续主图，固定点对比保留在 `primary/clinical_contrasts.csv`；CEC的 `cec_hdl_comparison.csv`，两模型必须同人数、同插补；脑肾的 `primary/kidney_interaction_curves.csv`，包含依赖概率、概率差和条件相对概率比。脑肾主要P值对应交互。血压另有 `chd_rule_audit.json` 聚合规则计数和本地 `chd_conflicts.csv` 冲突清单。
 
 `eligible.csv`、`master.csv`、`exclusions.csv` 和 `model_membership.csv` 含患者信息，仅供工作站本地追溯；不要上传GitHub。截图请优先使用上面的摘要命令。`NOT_ESTIMABLE` 是未估计，不能解释为阴性。
 

@@ -131,4 +131,4 @@ def test_old_contract_not_in_current_holm_summary(tmp_path):
     (run / "primary/result.json").write_text(json.dumps({"status": "ESTIMATED", "p": .001}))
     (root / "latest_results.json").write_text(json.dumps({"path": str(run), "run": "old"}))
     row = read_results(cfg).set_index("study").loc["kidney"]
-    assert row.status == "PREVIOUS_VERSION" and np.isnan(row.p) and np.isnan(row.p_holm_five)
+    assert row.status == "PREVIOUS_VERSION" and np.isnan(row.p) and np.isnan(row.p_holm_four)
