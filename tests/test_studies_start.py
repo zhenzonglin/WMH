@@ -61,7 +61,7 @@ def test_cec_exclusion_does_not_bypass_other_errors(tmp_path, case):
 @pytest.mark.parametrize('failure', [None, 'blocked', 'exception'])
 def test_start_runs_all_to_report_without_prompt(monkeypatch, capsys, failure):
     calls = []
-    monkeypatch.setattr('sys.argv', ['wmh-study', 'start'])
+    monkeypatch.setattr('sys.argv', ['wmh-study', 'start', '--study', 'all'])
     monkeypatch.setattr(cli, 'load_workstation', lambda *a: {'mode': 'real'})
     monkeypatch.setattr('builtins.input', lambda *a: pytest.fail('start must not prompt'))
     monkeypatch.setattr('wmh_hcy.studies.reporting.print_audit', lambda state: None)
@@ -82,6 +82,18 @@ def test_start_runs_all_to_report_without_prompt(monkeypatch, capsys, failure):
         cli.main()
     assert calls == [(s, 'report', True) for s in STUDIES]+['summary']
     assert '[4/4] kidney' in capsys.readouterr().out
+
+
+def test_start_defaults_to_recovery_only(monkeypatch):
+    calls = []
+    monkeypatch.setattr('sys.argv', ['wmh-study', 'start'])
+    monkeypatch.setattr(cli, 'load_workstation', lambda *a: {'mode': 'real'})
+    monkeypatch.setattr('wmh_hcy.studies.reporting.print_audit', lambda *a: None)
+    monkeypatch.setattr('wmh_hcy.studies.reporting.summary', lambda *a, **k: None)
+    monkeypatch.setattr(runner, 'run', lambda cfg, study, through, *, fresh: calls.append((study, through, fresh)) or
+                        {'status': 'COMPLETED'})
+    cli.main()
+    assert calls == [('recovery', 'report', True)]
 
 
 def test_fresh_report_prepares_then_fits_without_loading_stale_snapshot(tmp_path, monkeypatch):

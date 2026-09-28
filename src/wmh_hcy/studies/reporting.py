@@ -181,8 +181,9 @@ def print_audit(state):
         print(state["error"])
         return
     a = state.get("audit", {})
-    keys = ["clinical_n", "exact_id_intersection", "eligible_n", "outcome_observed_n", "independent",
-            "dependent", "dead", "unknown", "events", "early_censor", "model_parameters"]
+    keys = ["clinical_n", "exact_id_intersection", "eligible_n", "base_eligible_n", "landmark_n",
+            "outcome_observed_n", "landmark_state_known_n", "independent", "dependent", "dead",
+            "unknown", "events", "early_censor", "model_parameters"]
     print(" | ".join(f"{k}={a[k]}" for k in keys if k in a))
     if a.get("eligible_n") == 0:
         print("Covariate missingness: NOT ASSESSED (empty eligible cohort; not evidence of absent source fields)")
@@ -202,6 +203,10 @@ def print_audit(state):
     if a.get("unit_conflicts"):
         print("Unit conflicts:", a["unit_conflicts"])
     print("Exclusions:", "; ".join(f"{k}:{v}" for k, v in a.get("flow_excluded", {}).items()) or "none")
+    if a.get("event_flow"):
+        print("Landmark exclusions:", "; ".join(f"{row['step']}:{row['excluded_here']}"
+                                                  for row in a["event_flow"] if row["excluded_here"]) or "none")
+        print("Chronology:", a.get("chronology", {}))
     print("Source files / fields:")
     import textwrap
     for source, variables in a.get("source_groups", {}).items():

@@ -9,15 +9,17 @@ from .registry import STUDIES
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Four independent CNSR-III imaging studies (Python only)")
+    parser = argparse.ArgumentParser(description="CNSR-III imaging studies; recovery is the default")
     sub = parser.add_subparsers(dest="command", required=True)
-    for command in ("start", "audit", "run", "summary", "diagnose"):
+    for command in ("start", "audit", "run", "summary", "diagnose", "recovery-path"):
         p = sub.add_parser(command)
         p.add_argument("--config")
-        if command not in {"summary", "diagnose"}:
-            p.add_argument("--study", choices=["all", *STUDIES], default="all")
+        if command not in {"summary", "diagnose", "recovery-path"}:
+            p.add_argument("--study", choices=["all", *STUDIES], default="recovery")
         if command == "run":
             p.add_argument("--through", choices=["prepare", "report"], default="prepare")
+        if command == "recovery-path":
+            p.add_argument("--through", choices=["prepare", "analyse"], default="analyse")
         if command == "summary":
             p.add_argument("--page", type=int, choices=[1, 2], default=1)
         if command == "diagnose":
@@ -26,6 +28,7 @@ def main():
     p.add_argument("--output", default="outputs/synthetic/studies_demo")
     p.add_argument("--n", type=int, default=1200)
     p.add_argument("--through", choices=["prepare", "report"], default="report")
+    p.add_argument("--study", choices=["all", *STUDIES], default="recovery")
     args = parser.parse_args()
     try:
         from .reporting import print_audit, summary
@@ -33,12 +36,19 @@ def main():
         if args.command == "demo":
             from .demo import make_demo
             cfg = make_demo(args.output, n=args.n)
-            for study in STUDIES:
+            for study in (STUDIES if args.study == "all" else (args.study,)):
                 print_audit(run(cfg, study, args.through))
-            summary(cfg)
+            if args.study == "all":
+                summary(cfg)
         else:
             cfg = load_workstation(args.config, "wmh-study")
-            if args.command == "diagnose":
+            if args.command == "recovery-path":
+                from .recovery_path import run as run_recovery_path
+                state = run_recovery_path(cfg, args.through)
+                print_audit(state)
+                if state["status"] not in {"PREPARED", "COMPLETED"}:
+                    parser.exit(2, "Recovery path review required; see run audit and status.json\n")
+            elif args.command == "diagnose":
                 from .diagnostics import diagnose
                 print("\n".join(diagnose(cfg, args.page)))
             elif args.command == "summary":

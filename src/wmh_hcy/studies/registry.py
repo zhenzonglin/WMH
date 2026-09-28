@@ -44,6 +44,10 @@ for month in (3, 12):
                 f"{arm.lower()}{component.lower()}{month}", "continuous", None)
 for year in (2, 3, 4, 5):
     SOURCES[f"F{year}Y_DEATH"] = (f"death{12*year}", "category", [1, 2])
+    source = "Y5_STROKE" if year == 5 else f"y{year}_STROKE"
+    suffix = "_DD" if year == 5 else "_dd"
+    SOURCES[source] = (f"y{year}_stroke_event", "category", [0, 1])
+    SOURCES[source + suffix] = (f"y{year}_stroke_day", "days", None)
 
 CATEGORIES = {alias: codes for alias, kind, codes in SOURCES.values()
               if kind == "category" or alias in {"pre_mrs", "mrs3"}}

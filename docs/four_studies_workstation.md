@@ -2,7 +2,7 @@
 
 新命令是 `wmh-study`。已有 `wmh-hcy`、一年分析和 `recurrence_v3` 的结果及指针均保留。无需重新整理原始SAS或SuStaIn目录。
 
-当前为第五版 `imaging_four_studies_20260918_v5`。CEC非法值按研究者决定排除，不再要求确认；一条 `wmh-study start` 自动完成最新数据准备和全部四项分析。IMG_ICAS、Apo_AI、神经酰胺和视觉重度WMH分析继续停用；其余模型、协变量及50份插补设置保持不变。汇总使用四项Holm校正，旧合同结果保留并标为PREVIOUS_VERSION。
+此页记录原四项研究合同。当前默认工作已改为recovery；`wmh-study start`只运行旧recovery报告，显式`--study all`才运行四项。新的全部卒中复发扩展使用`wmh-study recovery-path --through analyse`，见[专门说明](recovery_path_workstation.md)。旧合同与结果保持原样。
 
 ## 第一步 更新代码和入口
 
@@ -30,7 +30,7 @@ conda activate wmh-hcy
 ```bash
 git -C /data/usersdir/linzhenzong/WMH-code-v3 pull --ff-only &&
 cd /data/usersdir/linzhenzong/WMH &&
-wmh-study start
+wmh-study start --study all
 ```
 
 适用于已从 `WMH-code-v3` 执行过 `pip install --no-deps -e .` 的环境。纯Python代码修订无需重新安装依赖。不要在精简代码目录运行真实审计，否则不会读取原目录的 `config/workstation.local.yml`。首次精简克隆的旧Git兼容方式为 `clone --no-checkout --depth 1 --filter=blob:none` 后，在新目录依次执行 `sparse-checkout init --cone`、`sparse-checkout set src config scripts`、`checkout main`；避免在旧Git中直接使用 `clone --sparse`。
@@ -46,10 +46,10 @@ wmh-hcy configure --sas-dir "/实际SAS目录" --sustain-dir "/实际SuStaIn产�
 ## 一键完成数据准备 分析和报告
 
 ```bash
-wmh-study start
+wmh-study start --study all
 ```
 
-如果已执行上方的更新及启动命令，不需要再次执行。start等价于选择全部四项并运行至report，但每次都会从最新输入重新准备，避免沿用更新前的准备快照。它递归扫描SAS、提取各研究字段、连接影像、建立队列，通过检查后直接拟合并生成报告；全程不等待人工确认。终端按1/4至4/4显示研究进度。
+此处的`--study all`是归档合同的显式运行方式。默认`start`只运行recovery旧报告；新的recovery路径分析不调用这个四项汇总。
 
 需要只重跑某项时，可以选择：
 

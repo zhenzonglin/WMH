@@ -37,7 +37,7 @@ def synthetic_tables(n=1200, seed=20260917, missing=True):
     sbp3 = rng.normal(135, 15, n)
     recurrent = rng.exponential(4200*np.exp(-.012*(sbp3-135)-.15*w), n)
     observed = np.minimum(np.where(rng.random(n) < .15, rng.uniform(500, 1825, n), 1825), death_time)
-    stop = np.minimum(recurrent, observed)
+    stop = np.floor(np.minimum(recurrent, observed))  # documented endpoint day fields are integers
     event = (recurrent <= observed).astype(int)
     u0 = np.exp(rng.normal(.7, 1.1, n))
     u3 = np.exp(.7+.55*(np.log(u0)-.7)+rng.normal(0, .9, n))
@@ -86,6 +86,9 @@ def synthetic_tables(n=1200, seed=20260917, missing=True):
         prefix = "is" if year == 1 else f"y{year}_is"
         aliases[prefix+"_event"] = (event & (stop <= 365*year)).astype(float)
         aliases[prefix+"_day"] = np.minimum(stop, 365*year)
+        if year >= 2:
+            aliases[f"y{year}_stroke_event"] = (event & (stop <= 365*year)).astype(float)
+            aliases[f"y{year}_stroke_day"] = np.minimum(stop, 365*year)
     frame = pd.DataFrame({s: aliases[a] for s, (a, _, _) in SOURCES.items()})
     if missing:
         for source in ("BMI", "EDUC", "H_HYPT", "BSL_CYSC", "BSL_TG", "M03_CYSC"):

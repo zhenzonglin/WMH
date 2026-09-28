@@ -1,16 +1,16 @@
 # CNSR-III：影像与长期预后四项独立研究
 
-当前研究为：早期功能独立后的远期失能、恢复期血压与WMH、CEC与灰质结构、脑肾微血管损伤。四个队列分别建立，不要求Hcy，不以其他研究的检测完整性限制入组。原编号01、02、05、06保留。
+当前工作聚焦早期功能独立后的远期失能。新增3个月起点的全部卒中首次复发、影像形状与五年状态预测验证，详见[recovery路径运行说明](docs/recovery_path_workstation.md)。不要求Hcy、CEC或UACR完整。
 
-当前为第五版：按研究者决定，CEC负值、非有限值和非空不可解析值仅从CEC研究排除，不插补、不再要求确认；零值仍允许，不进行分位数截尾。IMG_ICAS、Apo_AI、神经酰胺和视觉重度WMH子组继续停用。四项主检验、协变量和插补设置保持不变。旧结果保留并标为 `PREVIOUS_VERSION`。详见[第五版修订与验证](docs/four_studies_revision_v5.md)。
+原四项研究第五版合同、结果与指针保留，可显式指定旧研究运行。IMG_ICAS、Apo_AI、神经酰胺和视觉重度WMH子组继续停用。历史合同详见[第五版修订与验证](docs/four_studies_revision_v5.md)。
 
-更新后只需 `wmh-study start`：自动从最新输入重新准备四个独立队列，逐项拟合并生成报告。无需先审计，也无需在准备完成后再输入命令。审计文件自动保存；诊断命令仍可用于查看问题。参见[工作站操作](docs/four_studies_workstation.md)。
+更新后运行 `wmh-study recovery-path --through analyse`：自动从最新输入审计、建队列并分析，仅生成数据表、图和诊断，不生成Word或HTML。`wmh-study start`现仅默认运行旧recovery报告；其余旧研究只有显式指定时才执行。
 
 ```bash
 conda activate wmh-hcy
 git pull --ff-only
 python -m pip install --no-deps -e .
-wmh-study start
+wmh-study recovery-path --through analyse
 ```
 
 [四项统计方案](docs/four_studies_plan.md) · [Word方案](docs/CNSRIII_四项独立研究统计分析方案_20260918_v5.docx) · [工作站操作](docs/four_studies_workstation.md) · [本版验证](docs/four_studies_revision_v5.md) · [第三版历史合成演示](examples/studies_demo_v3/README.md)。复用现有多SAS、SuStaIn与精确ID配置；Python 3.11、Conda兼容。新结果写入 `outputs/real/studies/`。旧五项研究文档、示例及Hcy历史结果保留，以下内容是历史方案说明。
