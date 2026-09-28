@@ -6,15 +6,17 @@ import pandas as pd
 from numpy.testing import assert_allclose
 
 from wmh_hcy.studies.demo import make_demo
+from wmh_hcy.studies.design import StudyDesign
 from wmh_hcy.studies.recovery_mediation import feasibility, gformula, vital_state
 from wmh_hcy.studies.recovery_path import (
     first_stroke_conflicts,
     landmark,
     observation_after_known_death,
     prepare,
+    recurrence_curve,
     source_fields,
 )
-from wmh_hcy.studies.registry import primary_spec
+from wmh_hcy.studies.registry import ModelSpec, primary_spec
 
 
 def test_recovery_path_fields_do_not_require_retired_studies():
@@ -79,6 +81,37 @@ def test_mediation_gate_records_censor_and_ambiguous_order():
 def test_known_alive_death_flag_does_not_require_interim_mrs():
     frame = pd.DataFrame({"state12": [np.nan, 2], "death12": [2, 1]})
     assert vital_state(frame, 12).tolist() == [0., 2.]
+
+
+def test_recurrence_curve_does_not_retransform_missing_education(tmp_path):
+    data = pd.DataFrame({"wmh_ml": np.linspace(2., 30., 50),
+                         "education": [np.nan] + [1, 2] * 24 + [1]})
+    spec = ModelSpec(study="recovery", name="stroke_recurrence", family="cox",
+                     exposures=("wmh_ml",), covariates=("education",),
+                     splines=("wmh_ml",))
+    design = StudyDesign.freeze(data, spec)
+    completed = data.assign(education=data.education.fillna(1))
+    terms = design.transform(completed).columns.tolist()
+    params = np.array([.3, -.1, .2])
+    covariance = np.diag([.02, .03, .04])
+    covariance[0, 1] = covariance[1, 0] = .01
+    model = tmp_path / "stroke_recurrence"
+    model.mkdir()
+    np.savez_compressed(model / "pooled_inputs.npz", terms=np.asarray(terms),
+                        params=np.tile(params, (2, 1)),
+                        covariance=np.tile(covariance, (2, 1, 1)))
+
+    recurrence_curve(data, design, model, tmp_path)
+
+    curve = pd.read_csv(tmp_path / "wmh_recurrence_curve.csv")
+    assert (tmp_path / "wmh_recurrence_curve.png").exists()
+    assert_allclose(curve.iloc[40].HR, 1.)
+    vector = design.contrast(completed, {"wmh_ml": curve.iloc[0].wmh_ml},
+                             {"wmh_ml": curve.iloc[0].reference_wmh_ml})
+    expected_log_hr = vector @ params
+    expected_se = np.sqrt(vector @ covariance @ vector)
+    assert_allclose(curve.iloc[0].HR, np.exp(expected_log_hr))
+    assert_allclose(curve.iloc[0].upper, np.exp(expected_log_hr + 1.959963984540054*expected_se))
 
 
 def test_synthetic_preparation_is_separate_and_audited(tmp_path):

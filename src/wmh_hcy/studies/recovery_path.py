@@ -19,11 +19,12 @@ import numpy as np
 import pandas as pd
 
 from ..common import DataError, dump_json, outdir, read_csv, resolve
+from ..design import rcs_nonlinear
 from ..imaging import read_imaging
 from ..sas_extract import extract, inventory, resolve_owners
 from .analyses import run_one
 from .data import build_cohort, cohort_audit, read_clinical
-from .design import StudyDesign
+from .design import StudyDesign, raw_transform
 from .models import Fit
 from .pooling import contrast
 from .registry import SOURCES, ModelSpec, primary_spec
@@ -257,13 +258,29 @@ def _saved_fits(path: Path) -> list[Fit]:
     return [Fit(saved["terms"].tolist(), p, u, {}) for p, u in zip(saved["params"], saved["covariance"], strict=True)]
 
 
+def _wmh_curve_contrast(design: StudyDesign, terms: list[str], value: float, reference: float) -> np.ndarray:
+    """Change only the frozen WMH basis; unrelated covariates cancel exactly."""
+    if design.spec.interactions:
+        raise DataError("WMH curve requires a model without WMH interactions")
+    if "wmh_ml" not in terms or "wmh_ml_rcs" not in terms:
+        raise DataError("Saved recurrence model lacks the frozen WMH spline terms")
+    code = design.coding["wmh_ml"]
+    transformed = raw_transform(pd.Series([value, reference]), "wmh_ml").to_numpy()
+    scaled = (transformed - code["center"]) / code["scale"]
+    nonlinear = rcs_nonlinear(scaled, code["knots"])
+    vector = np.zeros(len(terms))
+    vector[terms.index("wmh_ml")] = scaled[0] - scaled[1]
+    vector[terms.index("wmh_ml_rcs")] = nonlinear[0] - nonlinear[1]
+    return vector
+
+
 def recurrence_curve(data: pd.DataFrame, design: StudyDesign, model_path: Path, output: Path) -> None:
     fits = _saved_fits(model_path)
     support = np.quantile(data.wmh_ml, [.05, .5, .95])
     grid = np.linspace(support[0], support[2], 81)
     rows = []
     for value in grid:
-        vector = design.contrast(data, {"wmh_ml": value}, {"wmh_ml": support[1]})
+        vector = _wmh_curve_contrast(design, fits[0].terms, value, support[1])
         pooled = contrast(fits, vector)
         rows.append({"wmh_ml": value, "HR": np.exp(pooled["estimate"]),
                      "lower": np.exp(pooled["lower"]), "upper": np.exp(pooled["upper"]),
