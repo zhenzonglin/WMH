@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -34,15 +35,22 @@ def fmt(value: object) -> str:
         return "NA"
 
 
+def run_directories(root: Path) -> list[Path]:
+    """Order on-disk timestamped runs; result pointers can be stale."""
+    folder = root.resolve() / "runs"
+    if not folder.is_dir():
+        return []
+    return sorted((p for p in folder.iterdir()
+                   if p.is_dir() and re.fullmatch(r"\d{8}T\d{12}Z", p.name)), reverse=True)
+
+
 def resolve_run(root: Path, explicit: Path | None = None) -> tuple[Path, dict]:
     root = root.resolve()
     if explicit is None:
-        pointer = read_json(root / "latest_path_attempt.json")
-        if not isinstance(pointer, dict):
-            raise ValueError("No latest_path_attempt.json; pass --run with the exact saved run")
-        run = Path(pointer["path"]).resolve()
-        if run.parent != (root / "runs").resolve() or pointer.get("run") != run.name:
-            raise ValueError("Latest-attempt pointer does not match this recovery-path run root")
+        candidates = run_directories(root)
+        if not candidates:
+            raise ValueError("No timestamped recovery-path run directories; pass --run with the exact saved run")
+        run = candidates[0]
     else:
         run = explicit.resolve()
     state = read_json(run / "status.json")
@@ -295,7 +303,7 @@ def build_pages(run: Path, state: dict) -> list[tuple[str, list[str]]]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
-    parser.add_argument("--run", type=Path, help="Read this exact saved run instead of latest attempt")
+    parser.add_argument("--run", type=Path, help="Read this exact saved run instead of newest on-disk run")
     parser.add_argument("--page", choices=["all", "1", "2", "3", "4", "5", "6"], default="all")
     parser.add_argument("--no-pause", action="store_true", help="Print all selected pages without terminal pauses")
     args = parser.parse_args()

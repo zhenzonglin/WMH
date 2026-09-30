@@ -13,7 +13,7 @@ python -m pip install --no-deps -e .
 wmh-study recovery-path --through analyse
 ```
 
-分析结束后用`python scripts/recovery_path_review.py`分6页查看同一次运行的关键结果，每页截图后按回车继续。图片的实际路径列在第6页；详见[截图查看说明](docs/recovery_path_workstation.md#按页查看并截图)。脚本只读，不重新分析。
+分析结束后用`python scripts/recovery_results_review.py --path-run outputs/real/studies/01_recovery_path/runs/<确切运行编号>`同时查看原recovery主分析和指定的recovery-path补充分析，分别标明运行编号、队列和结果。主分析默认选择最新保存模型的运行，也可用`--recovery-run`指定。通常分12页，每页截图后按回车继续，并列出3张图的实际路径。只查看扩展可用`python scripts/recovery_path_review.py --run <确切运行目录>`；省略`--run`时以磁盘最新目录为准。详见[截图查看说明](docs/recovery_path_workstation.md#按页查看并截图)。脚本只读，不重新分析或生成报告。
 
 [四项统计方案](docs/four_studies_plan.md) · [Word方案](docs/CNSRIII_四项独立研究统计分析方案_20260918_v5.docx) · [工作站操作](docs/four_studies_workstation.md) · [本版验证](docs/four_studies_revision_v5.md) · [第三版历史合成演示](examples/studies_demo_v3/README.md)。复用现有多SAS、SuStaIn与精确ID配置；Python 3.11、Conda兼容。新结果写入 `outputs/real/studies/`。旧五项研究文档、示例及Hcy历史结果保留，以下内容是历史方案说明。
 

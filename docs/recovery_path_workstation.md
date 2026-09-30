@@ -38,6 +38,15 @@ wmh-study recovery-path --through analyse
 
 ## 按页查看并截图
 
-分析结束后运行`python scripts/recovery_path_review.py`。脚本固定读取`latest_path_attempt.json`指向的同一次真实运行，分6页显示状态与人数、复发关联、功能模型形状、基线与插补诊断、中介、预测验证。交互终端中，每页截图后按回车继续；用`--page 2`可单独重看第2页，用`--run <确切运行目录>`可指定已保存运行。`--no-pause`输出全部页而不暂停。
+需要同时汇报原recovery主分析和recovery-path补充分析时，使用组合查看脚本，并明确指定补充分析目录。例如本次研究者提供的新运行：
 
-这是只读查看，不重新拟合、插补或修改结果，不打印患者ID或逐人数据。WMH四分位对比及非线性检验由已保存的系数、完整协方差和固定尺度计算。脚本不会用旧成功结果替换最新失败运行，也不会把缺失文件当作已生成。第6页列出实际存在的`wmh_recurrence_curve.png`和`prediction/apparent_calibration.png`的绝对路径；两张图片可另外截图。校准图为表观校准，乐观偏差修正指标见文字页。
+```bash
+python scripts/recovery_results_review.py \
+  --path-run outputs/real/studies/01_recovery_path/runs/20260929T081847414216Z
+```
+
+组合脚本通常显示12页：前6页为recovery主分析的病例与基线、主检验与各月份估计、敏感性估计、插补/权重诊断及标准化状态概率；后6页为明确指定的recovery-path运行。每页打印独立的研究名称、运行编号和绝对目录。主分析默认扫描`01_recovery/runs/`，选取最新有模型保存记录或已进入分析阶段的运行；新的仅审计/准备目录不会替代已分析目录。可以用`--recovery-run <确切主分析目录>`固定主分析。若同次运行的队列、审计与主模型人数不匹配，则保留错误并停止展示该主分析数值，补充分析查看仍可继续。没有远程通道时，本机不能据此核验工作站上的实际数值，须将工作站输出截图反馈。
+
+只查看扩展时可运行`python scripts/recovery_path_review.py --run <确切运行目录>`。省略`--run`时直接选取磁盘上最新时间戳目录，不依赖可能滞后的结果指针。它分6页显示状态与人数、复发关联、功能模型形状、基线与插补诊断、中介、预测验证。两种脚本均支持交互终端中截图后按回车继续、`--page 2`单独查看某页、`--no-pause`一次输出全部页。
+
+这是只读查看，不重新拟合、插补或修改结果，不打印患者ID或逐人数据，不加载血压、CEC或脑肾结果。WMH四分位对比及非线性检验由已保存的系数、完整协方差和固定尺度计算。脚本不会用旧成功结果替换最新失败运行，也不会把缺失文件当作已生成。组合查看列出3张图片的实际存在状态和绝对路径：原recovery的`primary_result.png`，以及指定recovery-path的`wmh_recurrence_curve.png`和`prediction/apparent_calibration.png`。图片可另外截图。校准图为表观校准，乐观偏差修正指标见文字页。原`report.html`只打印路径，本次不会重新生成报告。

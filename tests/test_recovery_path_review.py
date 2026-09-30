@@ -114,6 +114,24 @@ def test_latest_failed_attempt_does_not_fall_back_to_old_success(tmp_path):
     assert selected == latest and state["status"] == "FAILED"
 
 
+def test_newer_on_disk_run_wins_over_stale_pointer_and_explicit_run_is_respected(tmp_path):
+    old = make_run(tmp_path, "20260928T010000000000Z")
+    named = make_run(tmp_path, "20260929T081847414216Z")
+    latest = make_run(tmp_path, "20260930T010000000000Z", "FAILED")
+    root = named.parent.parent
+    dump(root / "latest_path_attempt.json", {"run": old.name, "path": str(old), "status": "COMPLETED"})
+    assert review.resolve_run(root)[0] == latest
+    assert review.resolve_run(root, named)[0] == named
+
+
+def test_newest_unreadable_status_does_not_fall_back(tmp_path):
+    old = make_run(tmp_path, "20260928T010000000000Z")
+    latest = old.parent / "20260929T081847414216Z"
+    latest.mkdir()
+    with pytest.raises(ValueError, match="status.json"):
+        review.resolve_run(old.parent.parent)
+
+
 def test_saved_run_identity_and_mode_are_checked(tmp_path):
     run = make_run(tmp_path)
     state = review.read_json(run / "status.json")
