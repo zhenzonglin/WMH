@@ -35,3 +35,9 @@ wmh-study recovery-path --through analyse
 新运行位于`outputs/real/studies/01_recovery_path/runs/<时间戳>/`。重点看`status.json`、`audit.json`、`base_flow.csv`、`event_flow.csv`、`stroke_recurrence/`、`wmh_recurrence_curve.csv/.png`、`functional_shape/`、`functional_shape_tests.json`、`functional_gm_log/`、`mediation_gate.json`、`mediation.json`及`prediction/validation.json`。`PARTIAL`表示某项必需补充分析未估计；每个模型目录的`failure.txt`和`result.json`给出原因。`NOT_ESTIMABLE`的中介是预设可行性门控，不等同于零效应。
 
 患者级CSV留在工作站的忽略目录，不进入Git。不得把合成演示人数、效应或P值写为真实研究结果。
+
+## 按页查看并截图
+
+分析结束后运行`python scripts/recovery_path_review.py`。脚本固定读取`latest_path_attempt.json`指向的同一次真实运行，分6页显示状态与人数、复发关联、功能模型形状、基线与插补诊断、中介、预测验证。交互终端中，每页截图后按回车继续；用`--page 2`可单独重看第2页，用`--run <确切运行目录>`可指定已保存运行。`--no-pause`输出全部页而不暂停。
+
+这是只读查看，不重新拟合、插补或修改结果，不打印患者ID或逐人数据。WMH四分位对比及非线性检验由已保存的系数、完整协方差和固定尺度计算。脚本不会用旧成功结果替换最新失败运行，也不会把缺失文件当作已生成。第6页列出实际存在的`wmh_recurrence_curve.png`和`prediction/apparent_calibration.png`的绝对路径；两张图片可另外截图。校准图为表观校准，乐观偏差修正指标见文字页。
