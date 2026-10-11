@@ -11,14 +11,16 @@ from .registry import STUDIES
 def main():
     parser = argparse.ArgumentParser(description="CNSR-III imaging studies; recovery is the default")
     sub = parser.add_subparsers(dest="command", required=True)
-    for command in ("start", "audit", "run", "summary", "diagnose", "recovery-path"):
+    for command in ("start", "audit", "run", "summary", "diagnose", "recovery-path", "recovery-trajectory"):
         p = sub.add_parser(command)
         p.add_argument("--config")
-        if command not in {"summary", "diagnose", "recovery-path"}:
+        if command not in {"summary", "diagnose", "recovery-path", "recovery-trajectory"}:
             p.add_argument("--study", choices=["all", *STUDIES], default="recovery")
         if command == "run":
             p.add_argument("--through", choices=["prepare", "report"], default="prepare")
         if command == "recovery-path":
+            p.add_argument("--through", choices=["prepare", "analyse"], default="analyse")
+        if command == "recovery-trajectory":
             p.add_argument("--through", choices=["prepare", "analyse"], default="analyse")
         if command == "summary":
             p.add_argument("--page", type=int, choices=[1, 2], default=1)
@@ -48,6 +50,12 @@ def main():
                 print_audit(state)
                 if state["status"] not in {"PREPARED", "COMPLETED"}:
                     parser.exit(2, "Recovery path review required; see run audit and status.json\n")
+            elif args.command == "recovery-trajectory":
+                from .recovery_trajectory import run as run_recovery_trajectory
+                state = run_recovery_trajectory(cfg, args.through)
+                print_audit(state)
+                if state["status"] not in {"PREPARED", "COMPLETED"}:
+                    parser.exit(2, "Recovery trajectory review required; see run audit and status.json\n")
             elif args.command == "diagnose":
                 from .diagnostics import diagnose
                 print("\n".join(diagnose(cfg, args.page)))
