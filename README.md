@@ -1,5 +1,7 @@
 # CNSR-III：影像与长期预后四项独立研究
 
+手稿图表现有独立导出入口 `python scripts/recovery_publication.py`：从明确指定的已保存recovery运行生成黄色标记的2幅图、5张TableOne/效应三线表，提供三种样式和可选轨迹图；不重新拟合模型，不修改旧运行。安装与确切工作站命令见[投稿图表导出说明](docs/recovery_publication_workstation.md)。
+
 当前工作聚焦早期功能独立后的远期失能。新增3个月起点的全部卒中首次复发、影像形状与五年状态预测验证，详见[recovery路径运行说明](docs/recovery_path_workstation.md)。不要求Hcy、CEC或UACR完整。
 
 原四项研究第五版合同、结果与指针保留，可显式指定旧研究运行。IMG_ICAS、Apo_AI、神经酰胺和视觉重度WMH子组继续停用。历史合同详见[第五版修订与验证](docs/four_studies_revision_v5.md)。
