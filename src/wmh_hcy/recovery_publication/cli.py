@@ -14,18 +14,23 @@ from pathlib import Path
 
 import pandas as pd
 
+from .effect_figures import (
+    EFFECT_VIEWS,
+    combined_effect_figure,
+    combined_effect_rows,
+    trajectory_effect_figure,
+)
 from .figures import (
     STYLES,
     dependence_points,
-    figure1,
     figure2,
-    flow_rows,
+    primary_probability_rows,
     save_figure,
     trajectory_figure,
-    transition_figure,
 )
 from .inputs import load_recovery, load_trajectory, source_manifest
 from .tables import build_baseline_tables, export_table
+from .theme import FONT_SIZE, resolved_font
 
 ANALYSIS_LABELS = {
     "primary": "Primary five-year analysis", "month12": "12 months", "month24": "24 months",
@@ -145,6 +150,21 @@ def trajectory_tables(data: dict, out: Path, *, demo: bool = False) -> list[Path
     return files
 
 
+def probability_interval_table(main: dict, out: Path, *, demo: bool = False) -> list[Path]:
+    """Retain each component's saved CI alongside compositional graphics."""
+    frame = primary_probability_rows(main)
+    rows = [[f'{r.wmh_ml:.2f}', f'{r.gm119_ml:.2f}', r.state.capitalize(),
+             f'{100*r.probability:.2f} ({100*r.lower:.2f}–{100*r.upper:.2f})']
+            for r in frame.itertuples(index=False)]
+    return export_table(out, "display_probability_intervals", "Display companion: five-year state probabilities",
+                        ["WMH (mL)", "GMV (mL)", "State", "Probability % (95% CI)"], rows,
+                        ["Saved model-standardised probabilities at the two imaging measures' quartile scenarios.",
+                         "Other covariates retain the primary cohort's empirical distribution.",
+                         "Intervals are pointwise for individual components, not cumulative stack boundaries.",
+                         "Scenarios are not patient subgroups, interaction tests, or individual risk thresholds."],
+                        demo=demo)
+
+
 def safe_output(path: Path, inputs: list[Path]) -> Path:
     path = path.resolve()
     if any(part in {"01_recovery", "01_recovery_path", "01_recovery_trajectory"} for part in path.parts):
@@ -158,12 +178,12 @@ def safe_output(path: Path, inputs: list[Path]) -> Path:
     return path
 
 
-def provenance(main_run: Path, trajectory_run: Path | None, main: dict) -> dict:
+def provenance(main_run: Path, trajectory_run: Path | None) -> dict:
     names = ["status.json", "audit.json", "eligible.csv", "cohort_flow.csv", "results.csv",
              "primary/standardized_states.csv", "primary/frozen_design.json"]
     if not (main_run / "audit.json").exists():
         names.remove("audit.json")
-    for name in main["result_details"]:
+    for name in ANALYSIS_LABELS:
         for artifact in ("result.json", "coefficients.csv"):
             if (main_run / name / artifact).is_file():
                 names.append(f"{name}/{artifact}")
@@ -176,39 +196,149 @@ def provenance(main_run: Path, trajectory_run: Path | None, main: dict) -> dict:
     return sources
 
 
-def write_gallery(out: Path, styles: list[str], demo: bool, trajectory: bool) -> None:
+def write_gallery(out: Path, styles: list[str], effect_views: list[str], demo: bool, trajectory: bool) -> None:
+    from PIL import Image
     intro = ("SYNTHETIC STYLE PREVIEW — NOT RESEARCH RESULTS" if demo else
-             "Saved-run figures. All styles use identical estimates and confidence intervals.")
-    parts = ["<!doctype html><html lang='en'><meta charset='utf-8'><title>Recovery figure styles</title>",
-             ("<style>body{font:16px Arial,sans-serif;margin:32px;color:#17212a}section{margin:32px 0}"
-             "img{width:100%;max-width:780px;border:1px solid #ddd}a{color:#0066a0}"
-             ".choices{display:flex;flex-wrap:wrap;gap:32px}.choice{max-width:800px}</style>"),
-             "<h1>Recovery manuscript figure styles</h1><p>" + intro + "</p>", "<div class='choices'>"]
-    figures = [("figure2", "Five-year dependence probability"), ("figure1", "Participant flow")]
+             "Saved-run results only — no statistical refitting.")
+    parts = ["<!doctype html><html lang='zh-CN'><meta charset='utf-8'><title>Recovery统计图型比较</title>",
+             ("<style>body{font:16px Arial,sans-serif;margin:32px;color:#17212a;line-height:1.5}"
+              "main{max-width:1800px;margin:auto}section{margin:32px 0}"
+              "img{height:auto;max-width:100%;display:block;margin:20px auto}a{color:#0066a0}"
+              ".notice{padding:16px;background:#fff3df}"
+              ".choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,690px),1fr));gap:24px}"
+              ".choice{padding:16px;border:1px solid #ddd;border-radius:6px}h3{margin-top:0}"
+              "nav a{margin-right:18px}.choice p{font-size:14px}</style><main>"),
+             "<h1>Recovery：不同统计展示方式</h1><p class='notice'>" + intro + "</p>",
+             ("<p>三套图型用于比较并选择。RRR各版本表达相同估计；概率图版本使用不同的已保存场景，"
+              "详见图注。可分别选择主图与补图，无需将所有版本放入论文。</p>"),
+             "<p>Seaborn + SciencePlots · 按投稿物理宽度预览（96 CSS dpi）；点击图片查看完整分辨率。</p>",
+             ("<nav><a href='#effects'>主要关联</a><a href='#probabilities'>五年概率</a>"
+              "<a href='#tables'>三线表</a></nav>")]
+
+    def group(anchor: str, title: str, description: str, cards: list[tuple[str, str, str]]) -> None:
+        parts.append(f"<section id='{anchor}'><h2>{title}</h2><p>{description}</p><div class='choices'>")
+        for label, stem, detail in cards:
+            with Image.open(out / (stem + ".png")) as raster:
+                css_width = raster.width / raster.info.get("dpi", (300, 300))[0] * 96
+            parts.append(f"<article class='choice'><h3>{html.escape(label)}</h3>"
+                         f"<p>{html.escape(detail)}</p><a href='{stem}.pdf'>PDF</a> · "
+                         f"<a href='{stem}.svg'>SVG</a> · <a href='{stem}.png'>查看完整图片</a>"
+                         f"<a href='{stem}.png'><img loading='lazy' src='{stem}.png' style='width:{css_width:.1f}px' "
+                         f"alt='{html.escape(title + ': ' + label)}'></a></article>")
+        parts.append("</div></section>")
+
+    effect_names = {"forest": "A · 森林图", "heatmap": "B · 效应热图", "diverging": "C · 发散效应条形图"}
+    probability_names = {"estimates": "A · 概率及置信区间", "heatmap": "B · 概率热图",
+                         "composition": "C · 三状态组成图"}
+    group("effects", "主要与补充关联：同一张RRR图",
+          "五年主分析置于首位；36、48个月为随访节点分析；五年结局可观测加权为敏感性分析。"
+          "所有版本包含这四项分析，区分依赖/死亡结局与WMH/GMV。",
+          [(effect_names[v], f"effects/{v}/combined_rrr", EFFECT_VIEWS[v]["description"]) for v in effect_views])
+    group("probabilities", "五年功能状态概率",
+          "A：GM中位数下的三个WMH场景及95%CI。B：WMH×GM九种组合的依赖概率。"
+          "C：九种组合的三状态组成；分量置信区间见配套表。",
+          [(probability_names[s], f"{s}/figure2", STYLES[s]["description"]) for s in styles])
     if trajectory:
-        figures += [("optional_figure_s1", "Longitudinal state probabilities"),
-                    ("optional_figure_s2", "Transition associations")]
-    for style in styles:
-        parts.append(f"<div class='choice'><h2>{style.capitalize()}</h2>"
-                     f"<p>{html.escape(STYLES[style]['description'])}</p>")
-        for stem, title in figures:
-            parts.append(f"<section><h3>{title}</h3><a href='{style}/{stem}.pdf'>Vector PDF</a> · "
-                         f"<a href='{style}/{stem}.svg'>Editable SVG</a><br>"
-                         f"<img src='{style}/{stem}.png' alt='{html.escape(title)}'></section>")
-        parts.append("</div>")
-    parts.append("</div><h2>Editable tables</h2>")
+        group("trajectories", "纵向标准化状态概率",
+              "A：第25/75百分位场景的访视折线与点式95%CI带。B：三个影像水平×三个访视的概率热图。"
+              "C：四个影像场景的三状态堆积图；各场景均将另一影像指标固定在中位数。",
+              [(probability_names[s], f"{s}/optional_figure_s1", STYLES[s]["description"]) for s in styles])
+        group("transitions", "纵向转移关联",
+              "四种转移分别呈现；每项RRR的参照为保持其起始状态，不能与五年结局的RRR混作同一结局。",
+              [(effect_names[v], f"effects/{v}/trajectory_rrr", EFFECT_VIEWS[v]["description"])
+               for v in effect_views])
+    parts.append("<section id='tables'><h2>可编辑三线表与区间配套表</h2>"
+                 "<p>原有主表与补表保留分析记录。图型选择不会删除表中的未估计状态或其他已保存分析。</p>")
     for p in sorted((out / "tables").glob("*.html")):
         parts.append(f"<p><a href='tables/{p.name}'>{p.stem}</a> · "
                      f"<a href='tables/{p.stem}.docx'>Word table</a></p>")
+    parts.append("</section><p><a href='figure_legends.txt'>完整英文图注</a> · "
+                 "<a href='manifest.json'>来源与导出清单</a></p></main></html>")
     (out / "style_gallery.html").write_text("\n".join(parts), encoding="utf-8")
 
 
+def figure_legends(styles: list[str], effect_views: list[str], trajectory: bool, *, demo: bool = False) -> str:
+    entries = ["SYNTHETIC STYLE PREVIEW — NOT RESEARCH RESULTS"] if demo else []
+    entries += [
+        ("Combined associations. Five-year primary analysis (emphasised), secondary 36- and 48-month "
+        "analyses, and five-year outcome-observation-weighted sensitivity analysis. Each panel shows "
+        "an imaging measure and a dependent-versus-independent or dead-versus-independent contrast. "
+        "RRR compares P(outcome)/P(independence) per 1 SD of log(1 + WMH volume) or raw GMV. "
+        "The primary model is the comparison reference, not a meta-analysis summary. All confidence "
+        "intervals are saved pointwise 95% intervals. No between-analysis differences are tested. "
+        "Exact RRRs and intervals are supplied in Tables 2, S2 and S3; the forest and diverging views "
+        "display the intervals, while the heatmap gives an overview of point estimates."),
+        ADJUSTMENT,
+    ]
+    effect_notes = {
+        "forest": "Forest view: horizontal axes are logarithmic; the null value is RRR = 1. "
+                  "Primary estimates are visually emphasised. Intervals retain the saved pooled bounds.",
+        "heatmap": "Effect heatmap: colours encode log(RRR), centred at zero (RRR = 1); cells retain "
+                   "the original RRR. Corresponding 95% CIs are given in the companion tables. "
+                   "Colour does not indicate statistical significance.",
+        "diverging": "Diverging bars: the axis shows 100 × (RRR − 1), with the saved interval endpoints "
+                     "transformed identically. This is the percentage change in P(outcome)/P(reference) "
+                     "per SD, not a percentage-point change in outcome probability or an individual risk. "
+                     "Original RRRs and intervals remain in the companion tables. The null value is zero.",
+    }
+    entries.extend(effect_notes[v] for v in effect_views)
+    entries.append("Any not-estimable result has no plotted estimate and is explicitly labelled. "
+                   "It is not a null estimate. Detailed statuses remain in the companion tables.")
+    primary_notes = {
+        "estimates": "Figure 2, interval view. Standardised five-year dependence probabilities at the "
+                     "25th, 50th and 75th percentiles of WMH, with GMV at its median. The x axis is raw "
+                     "WMH mL; points are discrete saved scenarios, not a continuous fitted curve.",
+        "heatmap": "Figure 2, probability heatmap. Dependence probabilities for the nine combinations "
+                   "of WMH and GMV at their 25th, 50th and 75th percentiles. Cell labels show probability "
+                   "alone; saved pointwise 95% CIs are provided in display_probability_intervals. "
+                   "These model-standardised scenarios are not observed subgroups "
+                   "and do not constitute an interaction test.",
+        "composition": "Figure 2, composition view. Independent, dependent and dead probabilities for "
+                       "the nine joint imaging scenarios, faceted by GMV. Each bar sums to 100%. "
+                       "The display_probability_intervals companion table provides every component's "
+                       "saved 95% CI; component intervals are not cumulative stack-boundary intervals.",
+    }
+    entries.extend(primary_notes[s] for s in styles)
+    entries.append("Five-year probability scenarios retain other covariates' empirical distribution in "
+                   "the primary cohort. Saved intervals retain multiple-imputation pooling and logit delta "
+                   "transformation. Quantile scenarios are not clinical cut-offs or validated individual risks.")
+    if trajectory:
+        entries += [
+            ("Longitudinal probabilities, optional Figure S1. Saved standardised state probabilities at "
+            "36, 48 and 60 months. The interval view connects the 25th and 75th percentile scenarios at "
+            "saved visits only, with shaded pointwise 95% intervals (not simultaneous confidence bands). "
+            "The heatmap shows all three quantiles and visits separately for each "
+            "imaging measure and state. Composition panels show the 25th/75th percentile scenarios of "
+            "each measure; each bar sums to 100%. The other imaging measure is fixed at its median. "
+            "Heatmap colour scales are shared between imaging measures within each state, but differ "
+            "between states. Line-plot state panels also use different y-axis ranges. "
+            "Stack components are labelled through the legend; numerical values are in the companion table. "
+            "Optional Table S5 contains all saved component intervals. Intervals are pointwise and use "
+            "Rubin variance with within-imputation parameter simulation; inspect the draw-count warning "
+            "in manifest.json. Lines do not estimate unsaved visits."),
+            ("Trajectory transition associations. Saved RRRs compare P(destination)/P(staying in the "
+            "starting state), per SD of log(1 + WMH) or raw GMV. These are neither hazard ratios nor "
+            "simple transition risk ratios. Intervals retain saved patient-cluster and multiple-imputation "
+            "uncertainty. The forest, heatmap and diverging view definitions above apply with this "
+            "transition-specific reference. These exploratory secondary estimates are separate from "
+            "the five-year outcome contrasts."),
+        ]
+    entries.append("Abbreviations: WMH, white matter hyperintensity; GMV, grey matter volume (GM119); "
+                   "RRR, relative risk ratio; SD, standard deviation; CI, confidence interval.")
+    return "\n\n".join(entries) + "\n"
+
+
 def build(main_run: Path, trajectory_run: Path | None, out: Path, *, styles: list[str],
-          preview_only: bool = False, demo: bool = False, education_labels: dict | None = None) -> Path:
+          effect_views: list[str] | None = None, preview_only: bool = False,
+          demo: bool = False, education_labels: dict | None = None) -> Path:
+    before = provenance(main_run, trajectory_run)
     main = load_recovery(main_run, allow_demo=demo)
     trajectory = load_trajectory(trajectory_run, allow_demo=demo) if trajectory_run else None
     if not styles or any(style not in STYLES for style in styles):
         raise ValueError("Select at least one recognised publication style")
+    effect_views = list(EFFECT_VIEWS) if effect_views is None else effect_views
+    if not effect_views or any(view not in EFFECT_VIEWS for view in effect_views):
+        raise ValueError("Select at least one recognised effect view")
     if trajectory and main["audit"]["eligible_n"] != trajectory["audit"]["base_eligible_n"]:
         raise ValueError("Recovery and trajectory base cohort sizes differ; select compatible saved runs")
     if trajectory:
@@ -218,17 +348,20 @@ def build(main_run: Path, trajectory_run: Path | None, out: Path, *, styles: lis
     # Validate every requested result table before creating any deliverables.
     result_rows(main, list(ANALYSIS_LABELS))
     out = safe_output(out, [main_run] + ([trajectory_run] if trajectory_run else []))
-    before = provenance(main_run, trajectory_run, main)
+    if before != provenance(main_run, trajectory_run):
+        raise ValueError("Input artifacts changed while loading; retry with stable saved runs")
     out.mkdir(parents=True, exist_ok=True)
     dump(out / "status.json", {"status": "BUILDING", "mode": "synthetic" if demo else "real"})
     try:
         table_dir = out / "tables"
         build_baseline_tables(main["cohort"], table_dir, education_labels, demo=demo)
         result_tables(main, table_dir, demo=demo)
+        probability_interval_table(main, table_dir, demo=demo)
         source_dir = out / "source_data"
         source_dir.mkdir()
-        pd.DataFrame(flow_rows(main)).to_csv(source_dir / "figure1_flow.csv", index=False)
         dependence_points(main).to_csv(source_dir / "figure2_probabilities.csv", index=False)
+        primary_probability_rows(main).to_csv(source_dir / "primary_probability_grid.csv", index=False)
+        combined_effect_rows(main).to_csv(source_dir / "combined_rrr.csv", index=False)
         for name, frame in main["coefficients"].items():
             frame.to_csv(source_dir / f"{name}_imaging_effects.csv", index=False)
         main["results"].to_csv(source_dir / "analysis_statuses.csv", index=False)
@@ -237,51 +370,39 @@ def build(main_run: Path, trajectory_run: Path | None, out: Path, *, styles: lis
             trajectory["effects"].to_csv(source_dir / "trajectory_effects.csv", index=False)
             trajectory["probabilities"].to_csv(source_dir / "trajectory_probabilities.csv", index=False)
         for style in styles:
-            for stem, plot, data in [("figure1", figure1, main), ("figure2", figure2, main)]:
-                save_figure(plot(data, style), out / style, stem, preview_only=preview_only, demo=demo)
+            save_figure(figure2(main, style), out / style, "figure2", preview_only=preview_only, demo=demo)
             if trajectory:
-                for stem, plot in [("optional_figure_s1", trajectory_figure),
-                                   ("optional_figure_s2", transition_figure)]:
-                    save_figure(plot(trajectory, style), out / style, stem, preview_only=preview_only, demo=demo)
-        write_gallery(out, styles, demo, bool(trajectory))
+                save_figure(trajectory_figure(trajectory, style), out / style, "optional_figure_s1",
+                            preview_only=preview_only, demo=demo)
+        for view in effect_views:
+            save_figure(combined_effect_figure(main, view), out / "effects" / view, "combined_rrr",
+                        preview_only=preview_only, demo=demo)
+            if trajectory:
+                save_figure(trajectory_effect_figure(trajectory, view), out / "effects" / view,
+                            "trajectory_rrr", preview_only=preview_only, demo=demo)
+        write_gallery(out, styles, effect_views, demo, bool(trajectory))
         warnings = ["Education labels require confirmation against the source codebook."] if not education_labels else []
         warnings += trajectory["warnings"] if trajectory else []
         warnings += ["No model was refitted. Rendering does not validate model assumptions or causal interpretation."]
-        after = provenance(main_run, trajectory_run, main)
+        after = provenance(main_run, trajectory_run)
         if before != after:
             raise ValueError("Input artifacts changed during export; publication package cannot be certified")
         versions = {package: importlib.metadata.version(package)
-                    for package in ("pandas", "numpy", "matplotlib", "pubfig", "tableone", "python-docx")}
-        caption = (
-            "Figure 1. Participant selection. Exclusion counts are sequential and come from the saved "
-            "recovery cohort audit. Three-month survival and independence exclusions are eligibility "
-            "failures, not assumed numbers of deaths or dependent participants.\n\n"
-            "Figure 2. Standardised five-year probability of functional dependence at the 25th, 50th and "
-            "75th percentiles of baseline WMH volume, with GMV fixed at its median. Other covariates "
-            "retain the primary cohort's empirical distribution. Bars indicate saved pointwise 95% "
-            "confidence intervals from multiple-imputation pooling and logit delta transformation. "
-            "The three display points are not clinical categories or cut-offs.\n\n"
-            "Abbreviations: WMH, white matter hyperintensity; GMV, grey matter volume (GM119); "
-            "mRS, modified Rankin scale; RRR, relative risk ratio; OR, odds ratio; CI, confidence interval.\n"
-        )
-        if trajectory:
-            caption += (
-                "\nOptional Figure S1. Saved standardised state probabilities at 36, 48 and 60 months. "
-                "Circles/solid lines and squares/dashed lines show the 25th and 75th percentile scenarios. "
-                "The other imaging measure is fixed at its median. Bars are saved pointwise 95% CIs "
-                "using Rubin variance and within-imputation parameter simulation; check the recorded "
-                "simulation draw count in manifest.json. Connecting lines do not estimate unsaved visits.\n\n"
-                "Optional Figure S2. Imaging associations with adjacent-visit transitions. RRRs compare "
-                "P(destination)/P(staying in the starting state), per SD of log(1 + WMH) or raw GMV. "
-                "Intervals retain saved patient-cluster and multiple-imputation uncertainty.\n")
-        if demo:
-            caption = "SYNTHETIC STYLE PREVIEW — NOT RESEARCH RESULTS\n\n" + caption
+                    for package in ("pandas", "numpy", "matplotlib", "seaborn", "SciencePlots",
+                                    "tableone", "python-docx", "openpyxl", "tabulate", "lxml", "et_xmlfile")}
+        caption = figure_legends(styles, effect_views, bool(trajectory), demo=demo)
         (out / "figure_legends.txt").write_text(caption, encoding="utf-8")
         files = [{"artifact": str(p.relative_to(out)).replace("\\", "/"), "bytes": p.stat().st_size,
                   "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
                  for p in sorted(out.rglob("*")) if p.is_file() and p.name != "status.json"]
         dump(out / "manifest.json", {"mode": "synthetic" if demo else "real", "sources": before,
-              "styles": styles, "python": platform.python_version(), "packages": versions,
+              "styles": styles, "effect_views": effect_views,
+              "combined_rrr_analyses": ["primary", "month36", "month48", "observation_weighted"],
+              "python": platform.python_version(), "packages": versions,
+              "figure_engine": "Seaborn + SciencePlots with Matplotlib export",
+              "font": {"family": resolved_font()["family"], "size_pt": FONT_SIZE,
+                       "file": Path(resolved_font()["path"]).name,
+                       "sha256": hashlib.sha256(Path(resolved_font()["path"]).read_bytes()).hexdigest()},
               "exporter_source_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                          for p in sorted(Path(__file__).parent.glob("*.py"))},
               "no_refitting": True, "patient_data_exported": False, "preview_only": preview_only,
@@ -300,7 +421,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--recovery-run", type=Path, help="Exact saved recovery run, never a latest pointer")
     parser.add_argument("--trajectory-run", type=Path, help="Optional exact saved trajectory run")
     parser.add_argument("--out", type=Path, help="New empty publication output directory")
-    parser.add_argument("--style", choices=["all", *STYLES], default="all")
+    parser.add_argument("--style", choices=["all", *STYLES], default="all",
+                        help="Probability representation; replaces the former classic/colour/compact palettes")
+    parser.add_argument("--effect-view", choices=["all", *EFFECT_VIEWS], default="all",
+                        help="Representation of combined RRRs and optional trajectory RRRs")
     parser.add_argument("--preview-only", action="store_true", help="Omit large 1200 dpi TIFF; retain PDF/SVG/PNG")
     parser.add_argument("--education-labels", type=Path, help='Verified local JSON map: {"1": "label", ...}')
     parser.add_argument("--demo", action="store_true", help="Synthetic style preview; no real run allowed")
@@ -312,15 +436,17 @@ def main(argv: list[str] | None = None) -> int:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     out = args.out or Path("outputs/publication/recovery") / ("demo_" + stamp if args.demo else stamp)
     styles = list(STYLES) if args.style == "all" else [args.style]
+    effect_views = list(EFFECT_VIEWS) if args.effect_view == "all" else [args.effect_view]
     try:
         if args.demo:
             from .demo import create_demo
             with tempfile.TemporaryDirectory(prefix="recovery_publication_synthetic_") as temporary:
                 main_run, trajectory_run = create_demo(Path(temporary))
-                build(main_run, trajectory_run, out, styles=styles, preview_only=args.preview_only, demo=True)
+                build(main_run, trajectory_run, out, styles=styles, effect_views=effect_views,
+                      preview_only=args.preview_only, demo=True)
         else:
             labels = json.loads(args.education_labels.read_text(encoding="utf-8")) if args.education_labels else None
-            build(args.recovery_run, args.trajectory_run, out, styles=styles,
+            build(args.recovery_run, args.trajectory_run, out, styles=styles, effect_views=effect_views,
                   preview_only=args.preview_only, education_labels=labels)
     except (ValueError, OSError, ImportError) as exc:
         print(f"Stopped: {exc}", file=sys.stderr)

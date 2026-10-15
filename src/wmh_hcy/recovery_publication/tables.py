@@ -106,6 +106,8 @@ def _write_docx(path: Path, title: str, columns: list[str], rows: list[list[str]
     title_style.font.color.rgb = RGBColor(0, 0, 0)
     title_style.paragraph_format.keep_with_next = True
     title_style.paragraph_format.space_after = Pt(8)
+    for border in list(title_style._element.get_or_add_pPr().findall(qn("w:pBdr"))):
+        border.getparent().remove(border)
     document.add_paragraph(title, style="Title")
 
     table = document.add_table(rows=1, cols=len(columns))
@@ -148,6 +150,9 @@ def _write_docx(path: Path, title: str, columns: list[str], rows: list[list[str]
             paragraph.paragraph_format.space_after = Pt(2)
             paragraph.paragraph_format.space_before = Pt(2)
             paragraph.paragraph_format.keep_with_next = row_index == 0
+            if columns[0] == "Characteristic" and max(1, len(rows) - 3) <= row_index < len(rows):
+                # Keep the final imaging block rather than orphaning its last row.
+                paragraph.paragraph_format.keep_with_next = True
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT if column_index == 0 else WD_ALIGN_PARAGRAPH.RIGHT
             run = paragraph.add_run(value)
             run.bold = row_index == 0

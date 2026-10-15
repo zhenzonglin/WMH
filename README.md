@@ -1,6 +1,6 @@
 # CNSR-III：影像与长期预后四项独立研究
 
-手稿图表现有独立导出入口 `python scripts/recovery_publication.py`：从明确指定的已保存recovery运行生成黄色标记的2幅图、5张TableOne/效应三线表，提供三种样式和可选轨迹图；不重新拟合模型，不修改旧运行。安装与确切工作站命令见[投稿图表导出说明](docs/recovery_publication_workstation.md)。
+手稿图表现有独立导出入口 `python scripts/recovery_publication.py`：从明确指定的recovery保存结果生成状态概率图，以及五年主分析、36/48个月和五年可观测概率加权的合并RRR图；概率图提供点区间、热图和组成图，RRR提供森林图、热图和发散条形图，均默认全部输出。可通过确切运行目录加入纵向轨迹图。绘图使用Seaborn和SciencePlots，无需LaTeX；按内容选择单栏或双栏尺寸，9 pt Arial优先，实际回退字体记录在清单中。图内保留必要标签，完整解释另存为图注，完整区间保留在图或伴随表中。原基线及效应三线表保留，TableOne仅用于基线汇总；不生成病例流程图或OR图，不重新拟合或改写旧运行。安装、选图参数与工作站命令见[投稿图表导出说明](docs/recovery_publication_workstation.md)。
 
 当前工作聚焦早期功能独立后的远期失能。新增3个月起点的全部卒中首次复发、影像形状与五年状态预测验证，详见[recovery路径运行说明](docs/recovery_path_workstation.md)。不要求Hcy、CEC或UACR完整。
 

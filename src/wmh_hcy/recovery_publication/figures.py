@@ -1,7 +1,6 @@
-"""Publication layouts; never compute model estimates or invent unsaved CIs."""
+"""Seaborn/SciencePlots layouts from saved probabilities; no model refitting."""
 from __future__ import annotations
 
-from contextlib import contextmanager
 from pathlib import Path
 
 import matplotlib
@@ -10,237 +9,243 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyArrowPatch, Rectangle
-from matplotlib.ticker import MaxNLocator, PercentFormatter, ScalarFormatter
+import seaborn as sns
+from matplotlib.colors import Normalize
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from matplotlib.ticker import MaxNLocator, PercentFormatter
+
+from .theme import PALETTE, STATE_COLOURS, publication_style
 
 STYLES = {
-    "classic": {"colour": "#222222", "second": "#777777", "marker": "o",
-                "description": "Monochrome, vertical point estimates and 95% confidence intervals"},
-    "colour": {"colour": "#0072B2", "second": "#D55E00", "marker": "o",
-               "description": "Blue and vermilion, vertical estimates; shape and line cues retained"},
-    "compact": {"colour": "#00796B", "second": "#6A3D9A", "marker": "s",
-                "description": "Horizontal interval layout with exact values in a separate column"},
+    "estimates": {**PALETTE,
+                  "description": "Saved estimates with confidence intervals or pointwise confidence bands"},
+    "heatmap": {**PALETTE,
+                "description": "Probability heatmaps; exact 95% intervals in companion tables"},
+    "composition": {**PALETTE,
+                    "description": "Stacked state probabilities; exact 95% intervals in companion tables"},
 }
-FLOW_LABELS = {
-    "start": "Registered patients", "clinical": "Registered patients", "base": "Eligible patients",
-    "adult_ischemic_stroke": "Adults with ischaemic stroke",
-    "available_true_icv": "Intracranial volume available",
-    "available_wmh": "WMH volume available", "available_gm119": "Grey matter volume available",
-    "available_lesion": "Acute lesion volume available",
-    "alive_at_month3": "Alive at three months",
-    "independent_at_month3": "Independent at three months\n(mRS 0–2)",
-    "known_five_year_functional_state": "Known five-year outcome\nPrimary analysis",
-}
-EXCLUSION_LABELS = {
-    "adult_ischemic_stroke": "Did not meet adult ischaemic\nstroke criteria",
-    "available_true_icv": "Intracranial volume unavailable",
-    "alive_at_month3": "Did not meet three-month\nsurvival criterion",
-    "independent_at_month3": "Did not meet three-month\nindependence criterion",
-    "known_five_year_functional_state": "Five-year state unknown",
-}
-
-
-@contextmanager
-def publication_style(name: str):
-    if name not in STYLES:
-        raise ValueError(f"Unknown style: {name}")
-    with plt.rc_context({"font.family": "DejaVu Sans", "font.size": 9, "axes.labelsize": 9,
-                         "axes.titlesize": 10, "xtick.labelsize": 8, "ytick.labelsize": 8,
-                         "legend.fontsize": 8, "axes.spines.top": False, "axes.spines.right": False,
-                         "axes.linewidth": .7, "lines.linewidth": 1.1, "pdf.fonttype": 42,
-                         "ps.fonttype": 42, "svg.fonttype": "none", "figure.facecolor": "white",
-                         "axes.facecolor": "white", "savefig.facecolor": "white", "axes.grid": False}):
-        yield STYLES[name]
+STATES = ("independent", "dependent", "dead")
+QUANTILES = (25, 50, 75)
+VISITS = (36, 48, 60)
+MM = 1 / 25.4
 
 
 def save_figure(fig, outdir: Path, stem: str, *, preview_only: bool, demo: bool) -> list[Path]:
-    """Vector PDF/SVG, 300 dpi PNG; optionally single-frame 1200 dpi TIFF.
+    """Preserve canvas dimensions in vector PDF/SVG, PNG 300 dpi and TIFF 1200 dpi.
 
-    BMJ-compatible export choices use an explicit custom pubfig spec; no
-    unrelated journal preset is silently applied. Widths are design choices.
+    GridSpec/constrained layout belongs to the figure, not the exporter. No
+    post-export restyling, bounding-box crop, or automatic physical resizing.
     """
-    import pubfig as pf
-
     outdir.mkdir(parents=True, exist_ok=True)
-    if demo:
-        fig.text(.5, .995, "SYNTHETIC STYLE PREVIEW — NOT RESEARCH RESULTS", ha="center", va="top",
-                 fontsize=8, color="#9A3412", weight="bold")
-    width_mm, height_mm = fig.get_size_inches() * 25.4
-    spec = pf.FigureSpec("bmj_project", font_family="DejaVu Sans", double_column_mm=173,
-                         default_raster_dpi=300)
-    files = []
-    for suffix in (".pdf", ".svg", ".png"):
-        path = outdir / (stem + suffix)
-        pf.save_figure(fig, path, spec=spec, width=width_mm, height_mm=height_mm,
-                       raster_dpi=300, transparent=False, trim=False)
-        files.append(path)
-    if not preview_only:
-        path = outdir / (stem + ".tiff")
-        fig.savefig(path, dpi=1200, facecolor="white", pil_kwargs={"compression": "tiff_lzw"})
-        files.append(path)
+    with publication_style("estimates"):
+        if demo:
+            fig.suptitle("Synthetic preview", x=.995, ha="right", fontsize=9, color=".45", fontweight="normal")
+        files = []
+        for suffix in (".pdf", ".svg", ".png"):
+            path = outdir / (stem + suffix)
+            fig.savefig(path, dpi=300, facecolor="white", transparent=False, bbox_inches=None)
+            files.append(path)
+        if not preview_only:
+            path = outdir / (stem + ".tiff")
+            fig.savefig(path, dpi=1200, facecolor="white", bbox_inches=None,
+                        pil_kwargs={"compression": "tiff_lzw"})
+            files.append(path)
     plt.close(fig)
     return files
 
 
-def flow_rows(data: dict) -> list[dict]:
-    """Retain saved exclusion steps; collapse only zero-exclusion intermediate steps."""
-    frame = data["flow"]
-    rows = []
-    for i, row in enumerate(frame.itertuples(index=False)):
-        if i == 0 or int(row.excluded_here) or row.step in {
-                "independent_at_month3", "known_five_year_functional_state"}:
-            label = FLOW_LABELS.get(row.step, row.step.replace("_", " ").capitalize())
-            if i == 0:
-                label = "CNSR-III registered participants"
-            rows.append({"step": row.step, "label": label, "remaining": int(row.remaining),
-                         "excluded_here": int(row.excluded_here)})
-    if len(rows) > 9:
-        raise ValueError("Flow has more than nine nonzero steps; review layout rather than omit exclusions")
-    return rows
-
-
-def figure1(data: dict, style: str):
-    with publication_style(style) as theme:
-        rows = flow_rows(data)
-        fig = plt.figure(figsize=(173 / 25.4, max(180, 27 * len(rows)) / 25.4))
-        # Explicit axes keep physical margins stable under pubfig export.
-        ax = fig.add_axes((.03, .09, .95, .84))
-        ax.set(xlim=(0, 1), ylim=(0, 1)); ax.axis("off")
-        positions = np.linspace(.95, .08, len(rows))
-        box_height = min(.095, .65 / len(rows))
-        for i, (row, y) in enumerate(zip(rows, positions)):
-            ax.add_patch(Rectangle((.035, y - box_height / 2), .54, box_height, facecolor="white",
-                                   edgecolor=theme["colour"], linewidth=.9))
-            ax.text(.305, y, f'{row["label"]}\nn = {row["remaining"]:,}',
-                    ha="center", va="center", fontsize=8.5, linespacing=1.3)
-            if i:
-                previous = positions[i - 1]
-                ax.add_patch(FancyArrowPatch((.305, previous - box_height / 2),
-                                            (.305, y + box_height / 2), arrowstyle="-|>",
-                                            mutation_scale=10, color="#444444", linewidth=.8))
-                if row["excluded_here"]:
-                    midpoint = (previous + y) / 2
-                    ax.plot([.305, .63], [midpoint, midpoint], color="#555555", lw=.7)
-                    reason = EXCLUSION_LABELS.get(row["step"], "Did not meet this criterion")
-                    ax.text(.65, midpoint, f'{reason}\nn = {row["excluded_here"]:,}',
-                            ha="left", va="center", fontsize=8, linespacing=1.3)
-        counts = data["audit"]
-        fig.text(.5, .035, f'Five-year states: independent {counts["independent"]:,}; '
-                 f'dependent {counts["dependent"]:,}; dead {counts["dead"]:,}', ha="center", fontsize=8)
-        return fig
+def primary_probability_rows(data: dict) -> pd.DataFrame:
+    """Copy all 27 saved rows, adding wmh_quantile, gm_quantile and scenario."""
+    frame = data["probabilities"].copy()
+    for exposure, label in (("wmh_ml", "wmh_quantile"), ("gm119_ml", "gm_quantile")):
+        values = sorted(frame[exposure].unique())
+        if len(values) != 3:
+            raise ValueError(f"Expected exactly three saved {exposure} display quantiles")
+        frame[label] = frame[exposure].map(dict(zip(values, QUANTILES, strict=True)))
+    if len(frame) != 27 or frame.duplicated(["wmh_quantile", "gm_quantile", "state"]).any():
+        raise ValueError("Expected a complete 27-row primary probability grid")
+    frame["scenario"] = [f"wmh_q{w}_gm_q{g}" for w, g in zip(
+        frame.wmh_quantile, frame.gm_quantile, strict=True)]
+    return frame.sort_values(["gm_quantile", "wmh_quantile", "state"]).reset_index(drop=True)
 
 
 def dependence_points(data: dict) -> pd.DataFrame:
-    probs = data["probabilities"]
-    gm_values = sorted(probs.gm119_ml.unique())
-    if len(gm_values) != 3:
-        raise ValueError("Expected exactly three saved GM119 display quantiles")
-    points = probs.loc[(probs.state == "dependent") & (probs.gm119_ml == gm_values[1])].copy()
-    return points.sort_values("wmh_ml").reset_index(drop=True)
+    """Three saved dependence estimates at median GMV, ordered by original WMH mL."""
+    frame = primary_probability_rows(data)
+    return frame.loc[frame.state.eq("dependent") & frame.gm_quantile.eq(50)].sort_values(
+        "wmh_ml").reset_index(drop=True)
+
+
+def _probability_axis(ax, *, upper=100., lower=0.):
+    ax.set_ylim(lower, upper)
+    ax.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
+    ax.yaxis.set_major_locator(MaxNLocator(4, integer=True))
+    ax.minorticks_off()
+    sns.despine(ax=ax)
+
+
+def _state_legend(fig):
+    handles = [Patch(facecolor=STATE_COLOURS[s], edgecolor="none", label=s.capitalize()) for s in STATES]
+    fig.legend(handles=handles, frameon=False, loc="outside upper center", ncol=3)
+
+
+def _composition_bars(ax, frame, key, order):
+    """Saved occupancy only; no hatching, numeric clutter, or invented intervals."""
+    values = frame.pivot(index=key, columns="state", values="probability").loc[list(order), list(STATES)]
+    if not np.allclose(values.sum(axis=1), 1, atol=1e-4, rtol=0):
+        raise ValueError("Composition probabilities must sum to one")
+    bottom = np.zeros(len(order))
+    for state in STATES:
+        height = values[state].to_numpy(float) * 100
+        ax.bar(np.arange(len(order)), height, width=.68, bottom=bottom, color=STATE_COLOURS[state],
+               edgecolor="white", linewidth=.5, label=state.capitalize())
+        bottom += height
+    ax.set_xlim(-.6, len(order) - .4)
+    _probability_axis(ax)
+
+
+def _heatmap(ax, frame, *, row_key, col_key, rows, cols, norm):
+    """Seaborn displays saved point values; interval values stay in companion tables."""
+    values = frame.pivot(index=row_key, columns=col_key, values="probability").loc[list(rows), list(cols)]
+    sns.heatmap(values * 100, ax=ax, annot=True, fmt=".1f", annot_kws={"fontsize": 9},
+                cmap=sns.light_palette("#456F89", as_cmap=True), norm=norm, cbar=False,
+                linewidths=.4, linecolor="white", xticklabels=list(cols), yticklabels=list(rows))
+    ax.tick_params(axis="both", length=0, labelrotation=0)
+    ax.minorticks_off()
+    return ax.collections[0]
+
+
+def _colourbar(fig, image, ax):
+    bar = fig.colorbar(image, cax=ax)
+    bar.ax.yaxis.set_major_locator(MaxNLocator(3))
+    bar.ax.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
+    bar.ax.minorticks_off()
+    bar.outline.set_visible(False)
+    return bar
 
 
 def figure2(data: dict, style: str):
-    points = dependence_points(data)
-    p = points.probability.to_numpy() * 100
-    lo = points.lower.to_numpy() * 100
-    hi = points.upper.to_numpy() * 100
-    error = np.array([p - lo, hi - p])
-    labels = [f'{q}th percentile\n{v:.2f} mL' for q, v in zip((25, 50, 75), points.wmh_ml)]
+    """Three distinct primary probability presentations, all using saved estimates."""
+    if style not in STYLES:
+        raise ValueError(f"Unknown style: {style}")
     with publication_style(style) as theme:
-        fig = plt.figure(figsize=(173 / 25.4, 112 / 25.4))
-        if style == "compact":
-            ax = fig.add_axes((.22, .27, .42, .54))
-            y = np.arange(3)
-            ax.errorbar(p, y, xerr=error, fmt=theme["marker"], capsize=4, color=theme["colour"], ms=6)
-            ax.set(yticks=y, yticklabels=labels,
-                   xlabel="Standardised five-year\ndependence probability (%)")
-            ax.invert_yaxis()
-            ax.set_xlim(0, max(hi) * 1.2)
-            ax.xaxis.set_major_locator(MaxNLocator(5, integer=True))
-            ax.xaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
-            for yy, prob, lower, upper in zip(y, p, lo, hi):
-                ax.text(1.06, yy, f"{prob:.2f}% ({lower:.2f}–{upper:.2f})",
-                        transform=ax.get_yaxis_transform(), va="center", fontsize=9)
-            ax.text(1.06, 1.08, "Probability (95% CI)", transform=ax.transAxes, fontsize=9)
-        else:
-            ax = fig.add_axes((.16, .27, .79, .56))
-            x = points.wmh_ml.to_numpy()
-            ax.errorbar(x, p, yerr=error, fmt=theme["marker"], capsize=4, color=theme["colour"], ms=6)
-            pad = max((x[-1] - x[0]) * .17, .1)
-            ax.set(xlim=(x[0] - pad, x[-1] + pad), ylim=(0, max(hi) * 1.25),
-                   xticks=x, xticklabels=labels, xlabel="Baseline WMH volume",
-                   ylabel="Standardised five-year\ndependence probability (%)")
-            ax.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
-            for xx, prob, upper in zip(x, p, hi):
-                ax.annotate(f"{prob:.2f}%", (xx, upper), xytext=(0, 7), textcoords="offset points",
-                            ha="center", fontsize=9)
-        ax.spines[["top", "right"]].set_visible(False)
-        fig.text(.15, .92, f'GMV fixed at the median ({points.gm119_ml.iloc[0]:.2f} mL)', fontsize=9)
-        fig.text(.15, .04, "Points are fixed display values; bars show pointwise 95% CIs.\nNo cut-off is implied.",
-                 fontsize=8)
+        frame = primary_probability_rows(data)
+        if style == "estimates":
+            points = dependence_points(data)
+            fig, ax = plt.subplots(figsize=(85 * MM, 68 * MM), layout="constrained")
+            x, p = points.wmh_ml.to_numpy(float), points.probability.to_numpy(float) * 100
+            low, high = points.lower.to_numpy(float) * 100, points.upper.to_numpy(float) * 100
+            ax.errorbar(x, p, yerr=np.vstack((p - low, high - p)), fmt="none",
+                        ecolor=theme["colour"], elinewidth=1.0, capsize=2.5, zorder=2)
+            sns.scatterplot(x=x, y=p, ax=ax, s=25, color=theme["colour"], edgecolor="none", zorder=3)
+            pad = max((x[-1] - x[0]) * .2, .1)
+            ax.set(xlim=(x[0] - pad, x[-1] + pad), xticks=x,
+                   xticklabels=[f"{v:.1f}" for v in x], xlabel="WMH volume (mL)",
+                   ylabel="Dependence probability (%)")
+            _probability_axis(ax, upper=min(100., high.max() * 1.15))
+            return fig
+        if style == "heatmap":
+            fig = plt.figure(figsize=(110 * MM, 90 * MM), layout="constrained")
+            grid = fig.add_gridspec(1, 2, width_ratios=(1, .045))
+            ax, cax = fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1])
+            dep = frame.loc[frame.state.eq("dependent")]
+            image = _heatmap(ax, dep, row_key="gm_quantile", col_key="wmh_quantile",
+                             rows=QUANTILES[::-1], cols=QUANTILES,
+                             norm=Normalize(vmin=0, vmax=dep.probability.max() * 100))
+            wmh, gm = dep.groupby("wmh_quantile").wmh_ml.first(), dep.groupby("gm_quantile").gm119_ml.first()
+            ax.set_xticklabels([f"Q{q}\n{wmh.loc[q]:.1f}" for q in QUANTILES])
+            ax.set_yticklabels([f"Q{q}\n{gm.loc[q]:.1f}" for q in QUANTILES[::-1]], rotation=0)
+            ax.set(xlabel="WMH volume (mL)", ylabel="GMV (mL)")
+            _colourbar(fig, image, cax)
+            return fig
+        fig, axes = plt.subplots(1, 3, figsize=(178 * MM, 90 * MM), layout="constrained", sharey=True)
+        for col, (ax, gm_q) in enumerate(zip(axes, QUANTILES, strict=True)):
+            selected = frame.loc[frame.gm_quantile.eq(gm_q)]
+            _composition_bars(ax, selected, "wmh_quantile", QUANTILES)
+            wmh = selected.groupby("wmh_quantile").wmh_ml.first()
+            ax.set_xticks(range(3), [f"{wmh.loc[q]:.1f}" for q in QUANTILES])
+            ax.set_xlabel("WMH volume (mL)")
+            ax.set_title(f"{chr(65 + col)}  GMV Q{gm_q}", loc="left")
+            ax.set_ylabel("State probability (%)" if col == 0 else "")
+        _state_legend(fig)
         return fig
+
+
+def _trajectory_rows(data):
+    frame = data["probabilities"].copy()
+    frame["quantile"] = frame.scenario.str.extract(r"_q(25|50|75)$", expand=False).astype(int)
+    frame["exposure"] = frame.scenario.str.split("_", n=1).str[0]
+    return frame
+
+
+def _trajectory_heatmap(frame):
+    fig = plt.figure(figsize=(178 * MM, 160 * MM), layout="constrained")
+    grid = fig.add_gridspec(3, 3, width_ratios=(1, 1, .045))
+    for row, state in enumerate(STATES):
+        all_states = frame.loc[frame.state.eq(state)]
+        norm = Normalize(vmin=max(0., all_states.probability.min() * 95),
+                         vmax=min(100., all_states.probability.max() * 105))
+        for col, exposure in enumerate(("wmh", "gm")):
+            ax = fig.add_subplot(grid[row, col])
+            selected = all_states.loc[all_states.exposure.eq(exposure)]
+            image = _heatmap(ax, selected, row_key="quantile", col_key="month",
+                             rows=QUANTILES[::-1], cols=VISITS, norm=norm)
+            name = "WMH" if exposure == "wmh" else "GMV"
+            ax.set_title(f"{chr(65 + row * 2 + col)}  {name} · {state.capitalize()}", loc="left")
+            ax.set_yticklabels([f"Q{q}" for q in QUANTILES[::-1]], rotation=0)
+            ax.set_ylabel("Display quantile" if col == 0 else "")
+            ax.set_xlabel("Months after stroke" if row == 2 else "")
+        _colourbar(fig, image, fig.add_subplot(grid[row, 2]))
+    return fig
 
 
 def trajectory_figure(data: dict, style: str):
+    """Saved visit occupancies, never a second fit, reaggregation, or CI procedure."""
+    if style not in STYLES:
+        raise ValueError(f"Unknown style: {style}")
     with publication_style(style) as theme:
-        fig = plt.figure(figsize=(173 / 25.4, 145 / 25.4))
-        axes = np.array([[fig.add_axes((.12 + c*.30, .59 - r*.41, .24, .27))
-                          for c in range(3)] for r in range(2)])
-        for r, exposure in enumerate(("wmh", "gm")):
-            for c, state in enumerate(("independent", "dependent", "dead")):
-                ax = axes[r, c]
-                for q, colour, marker, linestyle in ((25, theme["colour"], "o", "-"),
-                                                     (75, theme["second"], "s", "--")):
-                    values = data["probabilities"].loc[
-                        (data["probabilities"].scenario == f"{exposure}_q{q}")
-                        & (data["probabilities"].state == state)].sort_values("month")
-                    y = values.probability.to_numpy() * 100
-                    ax.errorbar(values.month, y,
-                                yerr=np.vstack((y-values.lower.to_numpy()*100,
-                                                values.upper.to_numpy()*100-y)),
-                                fmt=marker, linestyle=linestyle, color=colour, capsize=2, ms=4,
-                                label=f"{q}th percentile")
-                ax.set(xticks=(36, 48, 60), xlim=(33, 63))
-                ax.yaxis.set_major_formatter(PercentFormatter(xmax=100, decimals=0))
-                ax.yaxis.set_major_locator(MaxNLocator(4, integer=True))
-                ax.set_title(f'{chr(65 + r*3+c)}  {state.capitalize()}', loc="left")
-                if c == 0:
-                    ax.set_ylabel(("WMH" if r == 0 else "GMV") + " scenarios\nState probability (%)")
-                if r == 1:
+        frame = _trajectory_rows(data)
+        if style == "heatmap":
+            return _trajectory_heatmap(frame)
+        if style == "composition":
+            fig, axes = plt.subplots(2, 2, figsize=(178 * MM, 120 * MM), layout="constrained", sharey=True)
+            for index, (exposure, quantile) in enumerate((("wmh", 25), ("wmh", 75), ("gm", 25), ("gm", 75))):
+                row, col = divmod(index, 2)
+                ax = axes[row, col]
+                selected = frame.loc[frame.scenario.eq(f"{exposure}_q{quantile}")]
+                _composition_bars(ax, selected, "month", VISITS)
+                name = "WMH" if exposure == "wmh" else "GMV"
+                ax.set_title(f"{chr(65 + index)}  {name} Q{quantile}", loc="left")
+                ax.set_xticks(range(3), VISITS)
+                ax.set_ylabel("State probability (%)" if col == 0 else "")
+                ax.set_xlabel("Months after stroke" if row == 1 else "")
+            _state_legend(fig)
+            return fig
+        fig, axes = plt.subplots(2, 3, figsize=(178 * MM, 110 * MM), layout="constrained", sharex=True)
+        for col, state in enumerate(STATES):
+            all_states = frame.loc[frame.state.eq(state)]
+            for row, exposure in enumerate(("wmh", "gm")):
+                ax = axes[row, col]
+                selected = all_states.loc[all_states.exposure.eq(exposure)]
+                for q, colour, marker, line in ((25, theme["colour"], "o", "-"),
+                                                (75, theme["second"], "s", "--")):
+                    values = selected.loc[selected["quantile"].eq(q)].sort_values("month").copy()
+                    values["probability_percent"] = values.probability * 100
+                    sns.lineplot(data=values, x="month", y="probability_percent", ax=ax,
+                                 estimator=None, errorbar=None, sort=False, legend=False,
+                                 marker=marker, linestyle=line, color=colour, linewidth=1.1, markersize=4)
+                    ax.fill_between(values.month.to_numpy(), values.lower.to_numpy() * 100,
+                                    values.upper.to_numpy() * 100, color=colour, alpha=.14, linewidth=0)
+                low, high = all_states.lower.min() * 100 - 2, all_states.upper.max() * 100 + 2
+                _probability_axis(ax, lower=low if state == "independent" else min(0., low), upper=high)
+                ax.set(xticks=VISITS, xlim=(34, 62), ylabel="", xlabel="")
+                if col == 0:
+                    ax.set_ylabel(("WMH" if row == 0 else "GMV") + "\nProbability (%)")
+                if row == 1:
                     ax.set_xlabel("Months after stroke")
-        handles, labels = axes[0, 0].get_legend_handles_labels()
-        fig.legend(handles, labels, frameon=False, loc="upper center", bbox_to_anchor=(.55, .965), ncol=2)
-        fig.text(.11, .045, "Other imaging measure fixed at its median; pointwise 95% CIs.\n"
-                 "Lines connect saved visits only; panel y-axis ranges differ.", fontsize=8)
-        return fig
-
-
-def transition_figure(data: dict, style: str):
-    transitions = ["independent_to_dependent", "dependent_to_independent",
-                   "independent_to_dead", "dependent_to_dead"]
-    labels = ["Independent → dependent", "Dependent → independent", "Independent → dead", "Dependent → dead"]
-    with publication_style(style) as theme:
-        fig = plt.figure(figsize=(173 / 25.4, 118 / 25.4))
-        axes = [fig.add_axes((.31 + i*.35, .28, .28, .55)) for i in range(2)]
-        vals = data["effects"]
-        low = min(vals.ratio_lower.min(), .5) * .9
-        high = max(vals.ratio_upper.max(), 2.) * 1.1
-        for i, (ax, exposure) in enumerate(zip(axes, ("wmh_ml", "gm119_ml"))):
-            frame = vals.loc[vals.exposure == exposure].set_index("transition").loc[transitions]
-            y = np.arange(4)
-            ratio = frame.ratio.to_numpy()
-            ax.axvline(1, color="#888888", linestyle="--", lw=.8)
-            ax.errorbar(ratio, y,
-                        xerr=np.vstack((ratio-frame.ratio_lower.to_numpy(), frame.ratio_upper.to_numpy()-ratio)),
-                        fmt=theme["marker"], color=theme["colour"] if i == 0 else theme["second"], capsize=3)
-            ax.set(xscale="log", xlim=(low, high), yticks=y, yticklabels=labels,
-                   title="WMH" if i == 0 else "GMV", xlabel="RRR (95% CI) per SD")
-            ax.set_xticks([v for v in (.5, .75, 1., 1.5, 2., 3.) if low < v < high])
-            ax.xaxis.set_major_formatter(ScalarFormatter())
-            ax.minorticks_off()
-            ax.invert_yaxis()
-            if i:
-                ax.tick_params(axis="y", labelleft=False)
-        fig.text(.06, .07, "Reference: remaining in the starting state. RRR compares P(destination)/P(stay).\n"
-                 "WMH: log(1 + volume) per SD; GMV: raw volume per SD. Not a hazard ratio.", fontsize=8)
+                ax.set_title(f"{chr(65 + row * 3 + col)}  {state.capitalize()}", loc="left")
+        handles = [Line2D([], [], color=theme["colour"], marker="o", linestyle="-", label="Q25"),
+                   Line2D([], [], color=theme["second"], marker="s", linestyle="--", label="Q75")]
+        fig.legend(handles=handles, frameon=False, loc="outside upper center", ncol=2)
         return fig

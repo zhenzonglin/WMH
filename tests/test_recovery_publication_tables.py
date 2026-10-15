@@ -119,6 +119,19 @@ def test_word_table_has_only_three_rules_and_repeating_header(tmp_path: Path):
         assert list(csv.reader(handle))[1] == ["Age, years", "61 [54, 70]"]
 
 
+def test_word_title_removes_inherited_decorative_border(tmp_path, monkeypatch):
+    import docx
+    from docx.oxml import OxmlElement
+    document = docx.Document()
+    document.styles["Title"]._element.get_or_add_pPr().append(OxmlElement("w:pBdr"))
+    monkeypatch.setattr(docx, "Document", lambda: document)
+    export_table(tmp_path, "plain_title", "Table 1 Example", ["A", "B"], [["1", "2"]], [])
+    with ZipFile(tmp_path / "plain_title.docx") as archive:
+        styles = etree.fromstring(archive.read("word/styles.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    assert not styles.xpath('//w:style[@w:styleId="Title"]/w:pPr/w:pBdr', namespaces=ns)
+
+
 def test_baseline_outputs_contain_no_patient_identifiers(tmp_path: Path):
     cohort = _cohort()
     before = cohort.copy(deep=True)
