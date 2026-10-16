@@ -235,7 +235,7 @@ def write_gallery(out: Path, styles: list[str], effect_views: list[str], demo: b
           "所有版本包含这四项分析，区分依赖/死亡结局与WMH/GMV。",
           [(effect_names[v], f"effects/{v}/combined_rrr", EFFECT_VIEWS[v]["description"]) for v in effect_views])
     group("probabilities", "五年功能状态概率",
-          "A：GM中位数下的三个WMH场景及95%CI。B：WMH×GM九种组合的依赖概率。"
+          "A：GM中位数下的三个WMH场景及95%CI。B：WMH×GM九种组合的依赖和死亡概率。"
           "C：九种组合的三状态组成；分量置信区间见配套表。",
           [(probability_names[s], f"{s}/figure2", STYLES[s]["description"]) for s in styles])
     if trajectory:
@@ -288,9 +288,12 @@ def figure_legends(styles: list[str], effect_views: list[str], trajectory: bool,
         "estimates": "Figure 2, interval view. Standardised five-year dependence probabilities at the "
                      "25th, 50th and 75th percentiles of WMH, with GMV at its median. The x axis is raw "
                      "WMH mL; points are discrete saved scenarios, not a continuous fitted curve.",
-        "heatmap": "Figure 2, probability heatmap. Dependence probabilities for the nine combinations "
-                   "of WMH and GMV at their 25th, 50th and 75th percentiles. Cell labels show probability "
-                   "alone; saved pointwise 95% CIs are provided in display_probability_intervals. "
+        "heatmap": "Figure 2. Standardised five-year probabilities of dependence and death by baseline "
+                   "brain volumes. (A) Dependence (modified Rankin Scale score 3–5). (B) Death. "
+                   "Each panel shows the nine combinations of WMH and GMV at their 25th, 50th and 75th "
+                   "percentiles. Cell labels give probabilities as percentages; both panels share the "
+                   "same absolute probability colour scale. Saved pointwise 95% CIs are provided in "
+                   "display_probability_intervals. "
                    "These model-standardised scenarios are not observed subgroups "
                    "and do not constitute an interaction test.",
         "composition": "Figure 2, composition view. Independent, dependent and dead probabilities for "

@@ -164,12 +164,29 @@ def test_supplement_invalid_code_blocks_all_baseline_exports(tmp_path: Path):
 
 
 def test_absent_categories_keep_valid_order_without_invented_rows():
-    cohort = _cohort().loc[lambda frame: frame.pre_mrs.ne(5)]
+    cohort = _cohort().loc[lambda frame: frame.mrs3.ne(2)]
     with warnings.catch_warnings(record=True) as observed:
         warnings.simplefilter("always")
-        _, rows, _ = _baseline_content(cohort, ["pre_mrs"])
+        _, rows, _ = _baseline_content(cohort, ["mrs3"])
     assert not any("Order value not found" in str(warning.message) for warning in observed)
-    assert [row[0] for row in rows] == ["Pre-stroke mRS score", "  0", "  1", "  2", "  3", "  4"]
+    assert [row[0] for row in rows] == ["Three-month mRS score", "  0", "  1"]
+
+
+def test_pre_stroke_mrs_uses_tableone_median_iqr_but_month3_stays_categorical():
+    _, rows, _ = _baseline_content(_cohort(), ["pre_mrs", "mrs3"])
+    assert rows[0] == ["Pre-stroke mRS score", "2.0 [0.5,3.5]", "1.0 [0.5,1.5]",
+                       "3.5 [3.2,3.8]", "2.5 [1.2,3.8]"]
+    assert rows[1] == ["Three-month mRS score", "", "", "", ""]
+    assert [row[0] for row in rows[2:]] == ["  0", "  1", "  2"]
+
+
+@pytest.mark.parametrize("score", [2.5, 6, 8])
+def test_pre_stroke_mrs_summary_retains_valid_integer_score_gate(score):
+    cohort = _cohort()
+    cohort["pre_mrs"] = cohort.pre_mrs.astype(float)
+    cohort.loc[0, "pre_mrs"] = score
+    with pytest.raises(ValueError, match="integer scores 0 through 5"):
+        _baseline_content(cohort, ["pre_mrs"])
 
 
 def test_demo_watermark_is_present_in_every_table_format(tmp_path: Path):

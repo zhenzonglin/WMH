@@ -15,10 +15,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-CONTINUOUS = ("age", "wmh_ml", "gm119_ml", "icv_ml", "lesion_ml", "nihss")
+CONTINUOUS = ("age", "wmh_ml", "gm119_ml", "icv_ml", "lesion_ml", "nihss", "pre_mrs")
 CATEGORICAL = (
     "sex", "smoking", "drinking", "hypertension", "diabetes", "prior_stroke",
-    "education", "pre_mrs", "toast", "mrs3",
+    "education", "toast", "mrs3",
 )
 PRIMARY = (
     "age", "sex", "hypertension", "diabetes", "prior_stroke", "pre_mrs",
@@ -276,6 +276,8 @@ def _numeric_source(cohort: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     for variable in CONTINUOUS:
         if variable in source and source[variable].dropna().lt(0).any():
             raise ValueError(f"Negative values in baseline column {variable}")
+    if "pre_mrs" in source and not source.pre_mrs.dropna().isin(range(6)).all():
+        raise ValueError("Pre-stroke mRS must use integer scores 0 through 5 or missing")
     return source
 
 

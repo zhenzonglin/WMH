@@ -101,20 +101,26 @@ def test_primary_estimates_are_three_unconnected_original_volume_points_with_sav
         plt.close(fig)
 
 
-def test_primary_seaborn_heatmap_shows_nine_saved_probabilities_without_interval_text(saved):
+def test_primary_heatmap_shows_dependence_and_death_with_one_absolute_probability_scale(saved):
     main, _ = saved
     fig = figure2(main, "heatmap")
     try:
-        ax = fig.axes[0]
         source = primary_probability_rows(main)
-        source = source.loc[source.state.eq("dependent")]
-        matrix = source.pivot(index="gm_quantile", columns="wmh_quantile", values="probability")
-        expected = matrix.loc[list(QUANTILES[::-1]), list(QUANTILES)] * 100
-        np.testing.assert_allclose(_mesh(ax).get_array().reshape(3, 3), expected)
-        assert len(ax.texts) == 9
-        for text in ax.texts:
-            col, row = [int(v - .5) for v in text.get_position()]
-            assert text.get_text() == f"{expected.iloc[row, col]:.1f}"
+        assert len(fig.axes) == 3  # Two outcome panels and one shared colour bar.
+        for ax, state, title in zip(fig.axes[:2], ("dependent", "dead"),
+                                    ("(A) Dependence", "(B) Death"), strict=True):
+            selected = source.loc[source.state.eq(state)]
+            matrix = selected.pivot(index="gm_quantile", columns="wmh_quantile", values="probability")
+            expected = matrix.loc[list(QUANTILES[::-1]), list(QUANTILES)] * 100
+            np.testing.assert_allclose(_mesh(ax).get_array().reshape(3, 3), expected)
+            assert len(ax.texts) == 9 and ax.get_title(loc="left") == title
+            for text in ax.texts:
+                col, row = [int(v - .5) for v in text.get_position()]
+                assert text.get_text() == f"{expected.iloc[row, col]:.1f}"
+        assert _mesh(fig.axes[0]).norm is _mesh(fig.axes[1]).norm
+        assert _mesh(fig.axes[0]).norm.vmin == 0
+        assert _mesh(fig.axes[0]).norm.vmax == source.loc[
+            source.state.isin(("dependent", "dead")), "probability"].max() * 100
     finally:
         plt.close(fig)
 
@@ -234,7 +240,7 @@ def test_probability_layouts_do_not_modify_inputs_and_render(saved, style):
 def test_journal_scale_uses_resolved_font_uniform_size_and_no_explanatory_titles(saved, style, kind):
     main, data = saved
     fig = figure2(main, style) if kind == "primary" else trajectory_figure(data, style)
-    sizes = {"primary": {"estimates": (85, 68), "heatmap": (110, 90), "composition": (178, 90)},
+    sizes = {"primary": {"estimates": (85, 68), "heatmap": (178, 90), "composition": (178, 90)},
              "trajectory": {"estimates": (178, 110), "heatmap": (178, 160), "composition": (178, 120)}}
     try:
         fig.canvas.draw()

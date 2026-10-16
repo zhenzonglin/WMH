@@ -146,18 +146,23 @@ def figure2(data: dict, style: str):
             _probability_axis(ax, upper=min(100., high.max() * 1.15))
             return fig
         if style == "heatmap":
-            fig = plt.figure(figsize=(110 * MM, 90 * MM), layout="constrained")
-            grid = fig.add_gridspec(1, 2, width_ratios=(1, .045))
-            ax, cax = fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1])
-            dep = frame.loc[frame.state.eq("dependent")]
-            image = _heatmap(ax, dep, row_key="gm_quantile", col_key="wmh_quantile",
-                             rows=QUANTILES[::-1], cols=QUANTILES,
-                             norm=Normalize(vmin=0, vmax=dep.probability.max() * 100))
-            wmh, gm = dep.groupby("wmh_quantile").wmh_ml.first(), dep.groupby("gm_quantile").gm119_ml.first()
-            ax.set_xticklabels([f"Q{q}\n{wmh.loc[q]:.1f}" for q in QUANTILES])
-            ax.set_yticklabels([f"Q{q}\n{gm.loc[q]:.1f}" for q in QUANTILES[::-1]], rotation=0)
-            ax.set(xlabel="WMH volume (mL)", ylabel="GMV (mL)")
-            _colourbar(fig, image, cax)
+            fig = plt.figure(figsize=(178 * MM, 90 * MM), layout="constrained")
+            grid = fig.add_gridspec(1, 3, width_ratios=(1, 1, .045))
+            selected = frame.loc[frame.state.isin(("dependent", "dead"))]
+            # One absolute-probability scale makes colours comparable across outcomes.
+            norm = Normalize(vmin=0, vmax=selected.probability.max() * 100)
+            for col, (state, title) in enumerate((("dependent", "Dependence"), ("dead", "Death"))):
+                ax = fig.add_subplot(grid[0, col])
+                values = selected.loc[selected.state.eq(state)]
+                image = _heatmap(ax, values, row_key="gm_quantile", col_key="wmh_quantile",
+                                 rows=QUANTILES[::-1], cols=QUANTILES, norm=norm)
+                wmh = values.groupby("wmh_quantile").wmh_ml.first()
+                gm = values.groupby("gm_quantile").gm119_ml.first()
+                ax.set_xticklabels([f"Q{q}\n{wmh.loc[q]:.1f}" for q in QUANTILES])
+                ax.set_yticklabels([f"Q{q}\n{gm.loc[q]:.1f}" for q in QUANTILES[::-1]], rotation=0)
+                ax.set(xlabel="WMH volume (mL)", ylabel="GMV (mL)")
+                ax.set_title(f"({chr(65 + col)}) {title}", loc="left")
+            _colourbar(fig, image, fig.add_subplot(grid[0, 2]))
             return fig
         fig, axes = plt.subplots(1, 3, figsize=(178 * MM, 90 * MM), layout="constrained", sharey=True)
         for col, (ax, gm_q) in enumerate(zip(axes, QUANTILES, strict=True)):
